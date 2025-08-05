@@ -25,8 +25,10 @@ import {
 import { API_AUTHORIZATION, API_BASE_URL } from '@/lib/constants'
 import { submitForApproval } from '@/lib/api'
 import { VivoProduct, ProductSKU } from '@/types'
+import { debug } from 'console'
 
 interface SalesLine {
+  Officer_Code: any
   No: string
   SN: number
   Officer_Name: string
@@ -196,9 +198,12 @@ export default function RecordSalesForm({
 
   /**
    * Adds a new, empty sales line via the API and inserts it below the specified index.
-   * We're now sending a minimal payload to let the backend auto-generate most fields.
+   * Based on the "Control 'Officer Name' is read-only" error, the backend
+   * automatically populates user details, so we should only send the 'No'
+   * to create the new line item.
    */
   async function handleAddEmptyLineAfter(idx: number) {
+    debugger
     const row = lineItems[idx]
     if (!row) return
 
@@ -208,9 +213,7 @@ export default function RecordSalesForm({
 
     // The most minimal and safest payload is just the 'No' to link the new line.
     // The backend should handle generating the rest of the fields with default values.
-    const newPayload = {
-      No: row.No,
-    }
+    const newPayload = { No: row.No ,Officer_Code:row.Officer_Code ,Product_Code:row.Product_Code }
 
     const url = `${API_BASE_URL}/NewSalesLines`
     console.log('Sending POST request to:', url, 'with payload:', newPayload)

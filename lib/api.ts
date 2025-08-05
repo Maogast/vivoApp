@@ -2,8 +2,8 @@ import { API_AUTHORIZATION } from './constants'
 import { endpoints } from './endpoints'
 
 /**
- * Interface representing a single sales line item.
- */
+ * Interface representing a single sales line item.
+ */
 export interface SalesLine {
   No: string
   SN: number
@@ -23,16 +23,16 @@ export interface SalesLine {
 }
 
 /**
- * Interface for Vivo products.
- */
+ * Interface for Vivo products.
+ */
 export interface VivoProduct {
   Code: string
   Description: string
 }
 
 /**
- * Interface for Product SKUs.
- */
+ * Interface for Product SKUs.
+ */
 export interface ProductSKU {
   SKU_Code: string
   SKU_Name: string
@@ -44,8 +44,8 @@ export interface ApprovalResult {
 }
 
 /**
- * Interface for the new Approved Sales List records.
- */
+ * Interface for the new Approved Sales List records.
+ */
 export interface NewApprovedSalesRecord {
   No: string
   Region_Code: string
@@ -61,8 +61,8 @@ export interface NewApprovedSalesRecord {
 }
 
 /**
- * Represents the header row of a sales record
- */
+ * Represents the header row of a sales record
+ */
 export interface VivoSalesHeader {
   "@odata.etag": string
   No: string
@@ -80,8 +80,8 @@ export interface VivoSalesHeader {
 }
 
 /**
- * Generic GET helper with no-store caching and automatic Basic auth.
- */
+ * Generic GET helper with no-store caching and automatic Basic auth.
+ */
 export async function fetchData<T = any>(
   url: string,
   options: RequestInit = {}
@@ -106,8 +106,8 @@ export async function fetchData<T = any>(
 }
 
 /**
- * Generic POST helper with no-store caching and automatic Basic auth.
- */
+ * Generic POST helper with no-store caching and automatic Basic auth.
+ */
 export async function createData<T = any, U = any>(
   url: string,
   payload: T,
@@ -138,8 +138,8 @@ export async function createData<T = any, U = any>(
 }
 
 /**
- * Generic PATCH helper with no-store caching and automatic Basic auth.
- */
+ * Generic PATCH helper with no-store caching and automatic Basic auth.
+ */
 export async function updateData<T = any, U = any>(
   url: string,
   payload: T,
@@ -170,8 +170,8 @@ export async function updateData<T = any, U = any>(
 }
 
 /**
- * Generic DELETE helper with no-store caching and automatic Basic auth.
- */
+ * Generic DELETE helper with no-store caching and automatic Basic auth.
+ */
 export async function deleteData<U = any>(
   url: string,
   options: RequestInit = {}
@@ -201,11 +201,13 @@ export async function deleteData<U = any>(
 
 // =======================================================
 // NEW API FUNCTIONS
+// These functions correctly handle adding, updating, and deleting
+// sales lines using the `NewSalesLines` endpoint.
 // =======================================================
 
 /**
- * Fetches all Vivo products.
- */
+ * Fetches all Vivo products.
+ */
 export async function fetchVivoProducts(): Promise<VivoProduct[]> {
   const url = endpoints.lookup.vivoProducts();
   const res = await fetchData<{ value: VivoProduct[] }>(url);
@@ -213,8 +215,8 @@ export async function fetchVivoProducts(): Promise<VivoProduct[]> {
 }
 
 /**
- * Fetches all Lubricant SKUs.
- */
+ * Fetches all Lubricant SKUs.
+ */
 export async function fetchLubricantSKUs(): Promise<ProductSKU[]> {
   const url = endpoints.lookup.lubricantSKUs();
   const res = await fetchData<{ value: ProductSKU[] }>(url);
@@ -222,8 +224,8 @@ export async function fetchLubricantSKUs(): Promise<ProductSKU[]> {
 }
 
 /**
- * Fetches the sales lines for a given sale number.
- */
+ * Fetches the sales lines for a given sale number.
+ */
 export async function fetchSalesLines(saleNo: string): Promise<SalesLine[]> {
   const url = endpoints.recordSales.newSalesLines(saleNo);
   const res = await fetchData<{ value: SalesLine[] }>(url);
@@ -231,10 +233,10 @@ export async function fetchSalesLines(saleNo: string): Promise<SalesLine[]> {
 }
 
 /**
- * Adds a new sales line to a sale.
- * @param saleNo The sale number to which the new line will be added.
- * @returns The newly created sales line object from the API.
- */
+ * Adds a new sales line to a sale.
+ * @param saleNo The sale number to which the new line will be added.
+ * @returns The newly created sales line object from the API.
+ */
 export async function addSalesLine(saleNo: string): Promise<SalesLine> {
   const url = endpoints.recordSales.newSalesLines();
   const payload = { No: saleNo };
@@ -243,13 +245,13 @@ export async function addSalesLine(saleNo: string): Promise<SalesLine> {
 }
 
 /**
- * Updates a specific sales line item.
- * @param saleNo The sale number.
- * @param sn The serial number of the line item.
- * @param payload The fields to update.
- * @param etag The OData ETag for optimistic concurrency control.
- * @returns The updated sales line object from the API.
- */
+ * Updates a specific sales line item.
+ * @param saleNo The sale number.
+ * @param sn The serial number of the line item.
+ * @param payload The fields to update.
+ * @param etag The OData ETag for optimistic concurrency control.
+ * @returns The updated sales line object from the API.
+ */
 export async function updateSalesLine(
   saleNo: string,
   sn: number,
@@ -264,11 +266,11 @@ export async function updateSalesLine(
 }
 
 /**
- * Deletes a specific sales line item.
- * @param saleNo The sale number.
- * @param sn The serial number of the line item.
- * @param etag The OData ETag for optimistic concurrency control.
- */
+ * Deletes a specific sales line item.
+ * @param saleNo The sale number.
+ * @param sn The serial number of the line item.
+ * @param etag The OData ETag for optimistic concurrency control.
+ */
 export async function deleteSalesLine(
   saleNo: string,
   sn: number,
@@ -281,11 +283,11 @@ export async function deleteSalesLine(
 }
 
 /**
- * Fetches the new approved sales list with region and outlet filters.
- * @param regionCode The region code to filter by.
- * @param outletCode The outlet code to filter by.
- * @returns A promise that resolves to an array of VivoSalesHeader objects.
- */
+ * Fetches the new approved sales list with region and outlet filters.
+ * @param regionCode The region code to filter by.
+ * @param outletCode The outlet code to filter by.
+ * @returns A promise that resolves to an array of VivoSalesHeader objects.
+ */
 export async function fetchNewApprovedSalesList(
   regionCode: string,
   outletCode: string
@@ -315,8 +317,8 @@ export async function fetchNewApprovedSalesList(
 // =======================================================
 
 /**
- * Invoke the unbound SendRequestForApproval OData action.
- */
+ * Invoke the unbound SendRequestForApproval OData action.
+ */
 export async function submitForApproval(
   code: string,
   etag?: string
@@ -350,8 +352,8 @@ export async function submitForApproval(
 }
 
 /**
- * Invoke the unbound ReturnBackToOpen OData action.
- */
+ * Invoke the unbound ReturnBackToOpen OData action.
+ */
 export async function returnBackToOpen(code: string): Promise<void> {
   const url = endpoints.actions.returnBackToOpen()
   const payload = { Code: code }
@@ -374,8 +376,8 @@ export async function returnBackToOpen(code: string): Promise<void> {
 }
 
 /**
- * Invoke the unbound ApproveRequest OData action.
- */
+ * Invoke the unbound ApproveRequest OData action.
+ */
 export async function approveRequest(code: string): Promise<void> {
   const url = endpoints.actions.approveRequest()
   const payload = { Code: code }
@@ -398,10 +400,10 @@ export async function approveRequest(code: string): Promise<void> {
 }
 
 /**
- * Invoke the unbound RejectRequest OData action.
- * This version has been updated to match the component's call, which does not
- * include a comment. The payload now only contains the sales record number.
- */
+ * Invoke the unbound RejectRequest OData action.
+ * This version has been updated to match the component's call, which does not
+ * include a comment. The payload now only contains the sales record number.
+ */
 export async function rejectRequest(code: string): Promise<ApprovalResult> {
   const url = endpoints.actions.rejectRequest()
   const payload = { Code: code }

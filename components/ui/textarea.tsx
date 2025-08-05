@@ -1,8 +1,7 @@
 // components/ui/textarea.tsx
 import React, { TextareaHTMLAttributes } from "react"
 
-export interface TextareaProps
-  extends TextareaHTMLAttributes<HTMLTextAreaElement> {}
+export type TextareaProps = TextareaHTMLAttributes<HTMLTextAreaElement>
 
 export const Textarea: React.FC<TextareaProps> = props => (
   <textarea
