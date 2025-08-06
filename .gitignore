@@ -41,3 +41,7 @@ yarn-error.log*
 next-env.d.ts
 # metadata
 *.metadata.json
+# env production files
+.env.production
+# env deploy files
+.env.deploy
