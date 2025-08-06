@@ -1,3 +1,6 @@
+// PendingRecordSalesView.tsx
+// This component displays detailed information about a specific pending record sale.
+// It allows users to return, approve, reject, or comment on the sale.
 'use client'
 
 import React, { useState, useEffect } from 'react'
@@ -43,13 +46,14 @@ import {
   rejectRequest,
 } from '@/lib/api'
 
-import { VivoSalesHeader } from '@/types'
+import { VivoSalesHeader, SalesLine } from '@/types' // Import SalesLine and VivoSalesHeader from types
 
 interface Props {
   No: string
+  username: string // Added username to props
 }
 
-export default function PendingRecordsSalesView({ No }: Props) {
+export default function PendingRecordsSalesView({ No, username }: Props) {
   const router = useRouter()
 
   // Dialog open state
@@ -58,7 +62,7 @@ export default function PendingRecordsSalesView({ No }: Props) {
 
   // Fetched data
   const [header, setHeader] = useState<VivoSalesHeader | null>(null)
-  const [lineItems, setLineItems] = useState<any[]>([])
+  const [lineItems, setLineItems] = useState<SalesLine[]>([]) // Changed any[] to SalesLine[]
 
   // UI state
   const [loading, setLoading] = useState(false)
@@ -84,7 +88,7 @@ export default function PendingRecordsSalesView({ No }: Props) {
           fetchData<{ value: VivoSalesHeader[] }>(
             endpoints.recordSales.headerDetails(No),
           ),
-          fetchData<{ value: any[] }>(endpoints.recordSales.newSalesLines(No)),
+          fetchData<{ value: SalesLine[] }>(endpoints.recordSales.newSalesLines(No)), // Changed any[] to SalesLine[]
         ])
         setHeader(hdr.value?.[0] ?? null)
         setLineItems(lines.value ?? [])
@@ -279,7 +283,7 @@ export default function PendingRecordsSalesView({ No }: Props) {
               </Label>
               <Input
                 type="date"
-                defaultValue={new Date().toISOString().split('T')[0]}
+                defaultValue={header?.Date_Captured || ''} // Use actual captured date
                 readOnly
                 className="mt-1"
               />
@@ -290,7 +294,7 @@ export default function PendingRecordsSalesView({ No }: Props) {
               </Label>
               <Input
                 type="time"
-                defaultValue={new Date().toTimeString().slice(0, 5)}
+                defaultValue={header?.Time_Captured || ''} // Use actual captured time
                 readOnly
                 className="mt-1"
               />
@@ -301,9 +305,18 @@ export default function PendingRecordsSalesView({ No }: Props) {
               </Label>
               <Input
                 type="date"
-                defaultValue={new Date(Date.now() - 86_400_000)
-                  .toISOString()
-                  .split('T')[0]}
+                defaultValue={header?.Sales_Date || ''} // Use actual sales date
+                readOnly
+                className="mt-1"
+              />
+            </div>
+            {/* NEW: Captured By field */}
+            <div className="flex flex-col">
+              <Label className="uppercase text-xs text-gray-600">Captured By</Label>
+              <Input
+                id="captured-by"
+                name="captured_by"
+                defaultValue={username} // Use the passed username prop
                 readOnly
                 className="mt-1"
               />

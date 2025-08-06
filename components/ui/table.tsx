@@ -52,7 +52,8 @@ function TableFooter({ className, ...props }: React.ComponentProps<"tfoot">) {
   )
 }
 
-function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
+// FIX: Modified TableRow to explicitly filter and render children to prevent whitespace issues
+function TableRow({ className, children, ...props }: React.ComponentProps<"tr">) {
   return (
     <tr
       data-slot="table-row"
@@ -61,7 +62,12 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
         className
       )}
       {...props}
-    />
+    >
+      {/* Explicitly map children to ensure no stray text nodes */}
+      {React.Children.map(children, child =>
+        React.isValidElement(child) ? child : null
+      )}
+    </tr>
   )
 }
 

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useMemo } from 'react'
+import React, { useMemo, useState } from 'react'
 import Link from 'next/link'
 import {
   Table,
@@ -16,7 +16,7 @@ import { Card } from '../ui/card'
 import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
 import CreateNewHeaderCopy from './CreateNewHeaderCopy'
-import PendingRecordSalesViewWrapper from './PendingRecordSalesViewWrapper'
+import RecordSalesEditView from './RecordSalesEditView' // Updated import name
 import { VivoSalesHeader } from '@/types'
 
 interface Props {
@@ -24,12 +24,14 @@ interface Props {
 }
 
 export function RecordSalesList({ data }: Props) {
+  const [selectedSaleNo, setSelectedSaleNo] = useState<string | null>(null);
+  const [isRecordSalesEditViewOpen, setIsRecordSalesEditViewOpen] = useState(false);
+
   // compute grand totals
   const { totalTarget, totalAchieved, totalCommission } = useMemo(() => {
     return data.reduce(
       (acc, s) => {
         acc.totalTarget += s.Total_Target ?? 0
-        // replace `Total_Quantity` with the actual field name for "Achieved"
         acc.totalAchieved += s.Total_Achieved ?? 0
         acc.totalCommission += s.Total_Commission_Earned ?? 0
         return acc
@@ -37,6 +39,16 @@ export function RecordSalesList({ data }: Props) {
       { totalTarget: 0, totalAchieved: 0, totalCommission: 0 }
     )
   }, [data])
+
+  const handleOpenRecordSalesEditView = (saleNo: string) => {
+    setSelectedSaleNo(saleNo);
+    setIsRecordSalesEditViewOpen(true);
+  };
+
+  const handleCloseRecordSalesEditView = () => {
+    setSelectedSaleNo(null);
+    setIsRecordSalesEditViewOpen(false);
+  };
 
   return (
     <div>
@@ -83,7 +95,10 @@ export function RecordSalesList({ data }: Props) {
             {data.map((sale) => (
               <TableRow key={sale.No}>
                 <TableCell className="font-medium">
-                  <PendingRecordSalesViewWrapper No={sale.No} />
+                  {/* Open RecordSalesEditView directly */}
+                  <Button variant="link" onClick={() => handleOpenRecordSalesEditView(sale.No)}>
+                    {sale.No}
+                  </Button>
                 </TableCell>
                 <TableCell>{sale.Outlet_Code}</TableCell>
                 <TableCell>{sale.Outlet_Name}</TableCell>
@@ -96,7 +111,6 @@ export function RecordSalesList({ data }: Props) {
                   {sale.Total_Target.toFixed(2)}
                 </TableCell>
                 <TableCell className="text-right">
-                  {/* use your actual field here */}
                   {sale.Total_Achieved.toFixed(2)}
                 </TableCell>
                 <TableCell className="text-right">
@@ -116,7 +130,6 @@ export function RecordSalesList({ data }: Props) {
           {data.length > 0 && (
             <TableFooter>
               <TableRow>
-                {/* span first 8 columns to leave room for 3 totals + status */}
                 <TableCell colSpan={8}>Totals</TableCell>
                 <TableCell className="text-right">
                   {totalTarget.toFixed(2)}
@@ -127,7 +140,6 @@ export function RecordSalesList({ data }: Props) {
                 <TableCell className="text-right">
                   {totalCommission.toFixed(2)}
                 </TableCell>
-                {/* blank cell under “Status” */}
                 <TableCell />
               </TableRow>
             </TableFooter>
@@ -135,8 +147,18 @@ export function RecordSalesList({ data }: Props) {
         </Table>
       </Card>
 
+      {/* Render RecordSalesEditView when a sale is selected */}
+      {isRecordSalesEditViewOpen && selectedSaleNo && (
+        <RecordSalesEditView
+          No={selectedSaleNo}
+          header={data.find(s => s.No === selectedSaleNo) || { Region_Name: '', Region_Code: '', Outlet_Name: '', Outlet_Code: '' }}
+          onClose={handleCloseRecordSalesEditView}
+          isOpen={isRecordSalesEditViewOpen}
+        />
+      )}
+
       {/* still render below the table if you need it */}
-      <CreateNewHeaderCopy />
+      {/* <CreateNewHeaderCopy /> */}
     </div>
   )
 }

@@ -1,5 +1,3 @@
-// components/PendingSales/PendingSalesList.tsx
-
 'use client'
 
 import React, { useMemo } from 'react'
@@ -15,8 +13,8 @@ import {
 } from '@/components/ui/table'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import CreateNewHeaderCopy from '@/components/RecordSales/CreateNewHeaderCopy'
-import PendingRecordSalesViewWrapper from '@/components/RecordSales/PendingRecordSalesViewWrapper'
+import CreateNewHeaderCopy from '@/components/RecordSales/CreateNewHeaderCopy' // This import seems misplaced if it's only for RecordSales
+import PendingRecordSalesViewWrapper from '@/components/RecordSales/PendingRecordSalesViewWrapper' // This should be correct for PendingSales
 import type { VivoSalesHeader } from '@/types'
 
 interface Props {
@@ -43,7 +41,8 @@ export default function PendingSalesList({ data }: Props) {
     <div>
       <div className="flex items-center justify-between mb-4">
         <h2 className="font-medium text-xl">Pending Sales</h2>
-        <CreateNewHeaderCopy />
+        {/* CreateNewHeaderCopy is likely only for Record Sales, consider removing if not needed here */}
+        {/* <CreateNewHeaderCopy /> */}
       </div>
 
       <Card className="mt-4 bg-transparent h-[80vh] overflow-auto">
@@ -133,6 +132,9 @@ export default function PendingSalesList({ data }: Props) {
           )}
         </Table>
       </Card>
+
+      {/* still render below the table if you need it */}
+      {/* <CreateNewHeaderCopy /> */}
     </div>
   )
 }

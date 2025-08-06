@@ -1,16 +1,14 @@
-// app/dashboard/pending-sales/page.tsx
-
 import React from 'react'
 import { redirect } from 'next/navigation'
+import { getUserFromServer } from '@/lib/get-user.server' // Updated import path
 import { fetchData } from '@/lib/api'
 import { API_BASE_URL } from '@/lib/constants'
-import { getUserData } from '@/lib/get-user'
 import PendingSalesList from '@/components/PendingSales/PendingSalesList'
 import type { VivoSalesHeader } from '@/types'
 
 const page = async () => {
-  // 1) Grab the logged-in user
-  const user = await getUserData()
+  // 1) Grab the logged-in user from the server-side function
+  const user = await getUserFromServer()
 
   // 2) If there's no session, kick them to login
   if (!user) {
