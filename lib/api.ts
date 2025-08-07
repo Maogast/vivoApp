@@ -18,7 +18,6 @@ export async function fetchData<T = any>(
   url: string,
   options: RequestInit = {}
 ): Promise<T> {
-  console.log(`[fetchData] Fetching from: ${url}`); // Debugging log
   const res = await fetch(url, {
     method: options.method || 'GET',
     cache: 'no-store',
@@ -31,9 +30,8 @@ export async function fetchData<T = any>(
   })
 
   if (!res.ok) {
-    const errorText = await res.text();
-    console.error(`[fetchData] HTTP ${res.status}: ${errorText}`); // Debugging log
-    throw new Error(`fetchData failed: ${res.status} - ${errorText}`);
+    console.error(`[fetchData] HTTP ${res.status}:`, await res.text())
+    throw new Error(`fetchData failed: ${res.status}`)
   }
 
   return res.json()
@@ -47,7 +45,6 @@ export async function createData<T = any, U = any>(
   payload: T,
   options: RequestInit = {}
 ): Promise<U> {
-  console.log(`[createData] Posting to: ${url}`, payload); // Debugging log
   const res = await fetch(url, {
     method: options.method || 'POST',
     cache: 'no-store',
@@ -61,9 +58,8 @@ export async function createData<T = any, U = any>(
   })
 
   if (!res.ok) {
-    const errorText = await res.text();
-    console.error(`[createData] HTTP ${res.status}: ${errorText}`); // Debugging log
-    throw new Error(`createData failed: ${res.status} - ${errorText}`);
+    console.error(`[createData] HTTP ${res.status}:`, await res.text())
+    throw new Error(`createData failed: ${res.status}`)
   }
 
   if (res.status === 204) {
@@ -81,7 +77,6 @@ export async function updateData<T = any, U = any>(
   payload: T,
   options: RequestInit = {}
 ): Promise<U> {
-  console.log(`[updateData] Patching to: ${url}`, payload); // Debugging log
   const res = await fetch(url, {
     method: options.method || 'PATCH',
     cache: 'no-store',
@@ -95,9 +90,8 @@ export async function updateData<T = any, U = any>(
   })
 
   if (!res.ok) {
-    const errorText = await res.text();
-    console.error(`[updateData] HTTP ${res.status}: ${errorText}`); // Debugging log
-    throw new Error(`updateData failed: ${res.status} - ${errorText}`);
+    console.error(`[updateData] HTTP ${res.status}:`, await res.text())
+    throw new Error(`updateData failed: ${res.status}`)
   }
 
   if (res.status === 204) {
@@ -114,7 +108,6 @@ export async function deleteData<U = any>(
   url: string,
   options: RequestInit = {}
 ): Promise<U> {
-  console.log(`[deleteData] Deleting from: ${url}`); // Debugging log
   const res = await fetch(url, {
     method: options.method || 'DELETE',
     cache: 'no-store',
@@ -127,9 +120,8 @@ export async function deleteData<U = any>(
   })
 
   if (!res.ok) {
-    const errorText = await res.text();
-    console.error(`[deleteData] HTTP ${res.status}: ${errorText}`); // Debugging log
-    throw new Error(`deleteData failed: ${res.status} - ${errorText}`);
+    console.error(`[deleteData] HTTP ${res.status}:`, await res.text())
+    throw new Error(`deleteData failed: ${res.status}`)
   }
 
   if (res.status === 204) {
@@ -169,7 +161,7 @@ export async function fetchSalesLines(saleNo: string): Promise<SalesLine[]> {
   const res = await fetchData<{ value: RawVivoSalesLine[] }>(url); // Expect RawVivoSalesLine[] from API
   return res.value.map(row => ({
     No: row.No,
-    SN: row.Line_No ?? Date.now() + Math.random(), // Ensure SN is always a number, use unique fallback
+    SN: row.Line_No, // Map Line_No to SN
     SKU_Code: row.SKU_Code,
     SKU_Liters: row.Litres_Sold, // Map Litres_Sold to SKU_Liters
     Commission_Earned: row.Commission_Earned,
@@ -200,7 +192,7 @@ export async function addSalesLine(saleNo: string): Promise<SalesLine> {
   const newLine = await createData<typeof payload, RawVivoSalesLine>(url, payload); // Expect RawVivoSalesLine from API
   return {
     No: newLine.No,
-    SN: newLine.Line_No ?? Date.now() + Math.random(), // Ensure SN is always a number, use unique fallback
+    SN: newLine.Line_No,
     SKU_Code: newLine.SKU_Code,
     SKU_Liters: newLine.Litres_Sold,
     Commission_Earned: newLine.Commission_Earned,
@@ -252,7 +244,7 @@ export async function updateSalesLine(
   });
   return {
     No: updatedLine.No,
-    SN: updatedLine.Line_No ?? Date.now() + Math.random(), // Ensure SN is always a number, use unique fallback
+    SN: updatedLine.Line_No,
     SKU_Code: updatedLine.SKU_Code,
     SKU_Liters: updatedLine.Litres_Sold,
     Commission_Earned: updatedLine.Commission_Earned,

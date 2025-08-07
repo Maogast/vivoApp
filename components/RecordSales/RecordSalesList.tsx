@@ -1,3 +1,6 @@
+// components/RecordSales/RecordSalesList.tsx
+// This component displays a list of sales records with options to create new headers and edit existing records.
+// It uses a table to present the data and includes functionality for viewing details of each sale.
 'use client'
 
 import React, { useMemo, useState } from 'react'
@@ -18,6 +21,15 @@ import { Button } from '../ui/button'
 import CreateNewHeaderCopy from './CreateNewHeaderCopy'
 import RecordSalesEditView from './RecordSalesEditView' // Updated import name
 import { VivoSalesHeader } from '@/types'
+import { Input } from '../ui/input' // Import Input for filter fields
+import { Label } from '../ui/label' // Import Label for filter fields
+import { ChevronDown, ChevronUp } from 'lucide-react'; // Import icons for collapsible
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible'; // Import Collapsible components
+
 
 interface Props {
   data: VivoSalesHeader[]
@@ -26,10 +38,38 @@ interface Props {
 export function RecordSalesList({ data }: Props) {
   const [selectedSaleNo, setSelectedSaleNo] = useState<string | null>(null);
   const [isRecordSalesEditViewOpen, setIsRecordSalesEditViewOpen] = useState(false);
+  const [isFilterOpen, setIsFilterOpen] = useState(true); // State to manage collapsible filter
 
-  // compute grand totals
+  // State for filter inputs
+  const [filterNo, setFilterNo] = useState<string>('');
+  const [filterSalesDate, setFilterSalesDate] = useState<string>('');
+  const [filterRegionName, setFilterRegionName] = useState<string>('');
+  const [filterOutletName, setFilterOutletName] = useState<string>('');
+
+
+  // Memoized filtered data based on input filters
+  const filteredData = useMemo(() => {
+    return data.filter(sale => {
+      const matchesNo = filterNo
+        ? sale.No.toLowerCase().includes(filterNo.toLowerCase())
+        : true;
+      const matchesSalesDate = filterSalesDate
+        ? sale.Sales_Date.toLowerCase().includes(filterSalesDate.toLowerCase())
+        : true;
+      const matchesRegionName = filterRegionName
+        ? sale.Region_Name.toLowerCase().includes(filterRegionName.toLowerCase())
+        : true;
+      const matchesOutletName = filterOutletName
+        ? sale.Outlet_Name.toLowerCase().includes(filterOutletName.toLowerCase())
+        : true;
+
+      return matchesNo && matchesSalesDate && matchesRegionName && matchesOutletName;
+    });
+  }, [data, filterNo, filterSalesDate, filterRegionName, filterOutletName]);
+
+  // compute grand totals based on filtered data
   const { totalTarget, totalAchieved, totalCommission } = useMemo(() => {
-    return data.reduce(
+    return filteredData.reduce(
       (acc, s) => {
         acc.totalTarget += s.Total_Target ?? 0
         acc.totalAchieved += s.Total_Achieved ?? 0
@@ -38,7 +78,7 @@ export function RecordSalesList({ data }: Props) {
       },
       { totalTarget: 0, totalAchieved: 0, totalCommission: 0 }
     )
-  }, [data])
+  }, [filteredData])
 
   const handleOpenRecordSalesEditView = (saleNo: string) => {
     setSelectedSaleNo(saleNo);
@@ -56,6 +96,73 @@ export function RecordSalesList({ data }: Props) {
         <h2 className="font-medium text-xl">Record Sales</h2>
         <CreateNewHeaderCopy />
       </div>
+
+      {/* Collapsible Filter Section */}
+      <Collapsible
+        open={isFilterOpen}
+        onOpenChange={setIsFilterOpen}
+        className="w-full space-y-2 mb-4"
+      >
+        <div className="flex items-center justify-between px-4 py-2 bg-gray-100 rounded-md">
+          <h4 className="text-sm font-semibold">
+            Filters
+          </h4>
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" size="sm" className="w-9 p-0">
+              {isFilterOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              <span className="sr-only">Toggle filters</span>
+            </Button>
+          </CollapsibleTrigger>
+        </div>
+        <CollapsibleContent className="space-y-2">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <Label htmlFor="filterNo">Filter by Sale No</Label>
+              <Input
+                id="filterNo"
+                type="text"
+                placeholder="Enter Sale No"
+                value={filterNo}
+                onChange={(e) => setFilterNo(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="filterSalesDate">Filter by Sales Date</Label>
+              <Input
+                id="filterSalesDate"
+                type="date"
+                placeholder="Select Sales Date"
+                value={filterSalesDate}
+                onChange={(e) => setFilterSalesDate(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="filterRegionName">Filter by Region Name</Label>
+              <Input
+                id="filterRegionName"
+                type="text"
+                placeholder="Enter Region Name"
+                value={filterRegionName}
+                onChange={(e) => setFilterRegionName(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="filterOutletName">Filter by Outlet Name</Label>
+              <Input
+                id="filterOutletName"
+                type="text"
+                placeholder="Enter Outlet Name"
+                value={filterOutletName}
+                onChange={(e) => setFilterOutletName(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
 
       <Card className="mt-4 bg-transparent h-[80vh] overflow-auto">
         <Table>
@@ -81,21 +188,20 @@ export function RecordSalesList({ data }: Props) {
           </TableHeader>
 
           <TableBody>
-            {data.length === 0 && (
+            {filteredData.length === 0 && (
               <TableRow>
                 <TableCell
                   colSpan={12}
                   className="text-center text-muted-foreground"
                 >
-                  No sales records found.
+                  No sales records found matching your filters.
                 </TableCell>
               </TableRow>
             )}
 
-            {data.map((sale) => (
+            {filteredData.map((sale) => (
               <TableRow key={sale.No}>
                 <TableCell className="font-medium">
-                  {/* Open RecordSalesEditView directly */}
                   <Button variant="link" onClick={() => handleOpenRecordSalesEditView(sale.No)}>
                     {sale.No}
                   </Button>
@@ -127,7 +233,7 @@ export function RecordSalesList({ data }: Props) {
             ))}
           </TableBody>
 
-          {data.length > 0 && (
+          {filteredData.length > 0 && (
             <TableFooter>
               <TableRow>
                 <TableCell colSpan={8}>Totals</TableCell>
@@ -151,14 +257,11 @@ export function RecordSalesList({ data }: Props) {
       {isRecordSalesEditViewOpen && selectedSaleNo && (
         <RecordSalesEditView
           No={selectedSaleNo}
-          header={data.find(s => s.No === selectedSaleNo) || { Region_Name: '', Region_Code: '', Outlet_Name: '', Outlet_Code: '' }}
+          header={filteredData.find(s => s.No === selectedSaleNo) || { Region_Name: '', Region_Code: '', Outlet_Name: '', Outlet_Code: '' }}
           onClose={handleCloseRecordSalesEditView}
           isOpen={isRecordSalesEditViewOpen}
         />
       )}
-
-      {/* still render below the table if you need it */}
-      {/* <CreateNewHeaderCopy /> */}
     </div>
   )
 }

@@ -1,3 +1,6 @@
+// components/Auth/AuthGuard.tsx
+// This component ensures that only authenticated users can access certain parts of the application.
+// If the user is not authenticated, they will be redirected to the login page.
 "use client";
 
 import { useEffect, useState } from "react";

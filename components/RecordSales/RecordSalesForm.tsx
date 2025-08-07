@@ -1,6 +1,9 @@
+// components/RecordSales/RecordSalesForm.tsx
+// This component is responsible for displaying and managing the sales records form.
+// It includes functionality to add, update, and delete sales lines, as well as submit the form for approval.
 'use client'
 
-import React, { useEffect, useState, FormEvent } from 'react'
+import React, { useEffect, useState, FormEvent, useMemo } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -25,7 +28,6 @@ import {
 import { API_AUTHORIZATION, API_BASE_URL } from '@/lib/constants'
 import { submitForApproval } from '@/lib/api'
 import { VivoProduct, ProductSKU } from '@/types'
-import { debug } from 'console'
 
 interface SalesLine {
   Officer_Code: any
@@ -35,7 +37,7 @@ interface SalesLine {
   Role_Name: string
   Product_Code?: string
   Target: number
-  SKU_Code?: string
+  SKU_Code?: string // SKU_Code can be undefined
   SKU_Liters: number
   Grade: string
   Quantity: number
@@ -60,18 +62,28 @@ interface RecordSalesFormProps {
     Outlet_Code: string
   }
   onClose: () => void
+  products: VivoProduct[]; // Receive products as prop
+  SKU: ProductSKU[];       // Receive SKU as prop
 }
 
 export default function RecordSalesForm({
   No,
   header,
   onClose,
+  products, // Destructure from props
+  SKU,       // Destructure from props
 }: RecordSalesFormProps) {
   const [lineItems, setLineItems] = useState<SalesLine[]>([])
-  const [products, setProducts] = useState<VivoProduct[]>([])
-  const [SKU, setSKU] = useState<ProductSKU[]>([])
   const [toast, setToast] = useState<Toast | null>(null)
   const [isApproving, setIsApproving] = useState(false)
+
+  /**
+   * Memoized SKU list. For a datalist, we typically provide all available options,
+   * and the browser handles the filtering based on the input.
+   */
+  const filteredSKUs = useMemo(() => {
+    return SKU;
+  }, [SKU]); // Now depends on SKU prop
 
   // Auto-dismiss toast after 3s
   useEffect(() => {
@@ -148,8 +160,37 @@ export default function RecordSalesForm({
   // Field-specific handlers
   const handleProductChange = (i: number, code: string) =>
     handlePatch(i, { Product_Code: code }, 'Product')
-  const handleSKUChange = (i: number, code: string) =>
-    handlePatch(i, { SKU_Code: code }, 'SKU')
+
+  /**
+   * Handles changes to the SKU input field.
+   * If a valid SKU Code (from datalist selection) is entered, it updates the SKU_Code.
+   * If the input is cleared, it sets SKU_Code to undefined, allowing re-selection.
+   * If an invalid SKU is typed, it clears the SKU_Code and shows an error.
+   * @param idx The index of the line item.
+   * @param inputCode The SKU_Code (or empty string if cleared) from the input.
+   */
+  const handleSKUChange = (idx: number, inputCode: string) => {
+    // If the input is cleared, set SKU_Code to undefined
+    if (inputCode === '') {
+      handlePatch(idx, { SKU_Code: undefined }, 'SKU');
+      return;
+    }
+
+    // Find if the inputCode matches any SKU_Code from the fetched list
+    const matchedSKU = SKU.find(s => s.SKU_Code === inputCode);
+
+    if (matchedSKU) {
+      // If a valid SKU is found, update the SKU_Code
+      handlePatch(idx, { SKU_Code: matchedSKU.SKU_Code }, 'SKU');
+    } else {
+      // If no match is found, it means the user typed something invalid or incomplete.
+      // Clear the SKU_Code for this line item and show an error toast.
+      console.warn(`Invalid SKU entered for line ${idx}: ${inputCode}. Clearing SKU.`);
+      handlePatch(idx, { SKU_Code: undefined }, 'SKU'); // Clear the SKU if it's not a valid match
+      setToast({ type: 'error', message: `Invalid SKU: '${inputCode}'. Please select from the list.` });
+    }
+  };
+
   const handleQuantityChange = (i: number, qty: number) =>
     handlePatch(i, { Quantity: qty }, 'Quantity')
 
@@ -203,7 +244,6 @@ export default function RecordSalesForm({
    * to create the new line item.
    */
   async function handleAddEmptyLineAfter(idx: number) {
-    debugger
     const row = lineItems[idx]
     if (!row) return
 
@@ -213,7 +253,7 @@ export default function RecordSalesForm({
 
     // The most minimal and safest payload is just the 'No' to link the new line.
     // The backend should handle generating the rest of the fields with default values.
-    const newPayload = { No: row.No ,Officer_Code:row.Officer_Code ,Product_Code:row.Product_Code }
+    const newPayload = { No: row.No, Officer_Code: row.Officer_Code, Product_Code: row.Product_Code }
 
     const url = `${API_BASE_URL}/NewSalesLines`
     console.log('Sending POST request to:', url, 'with payload:', newPayload)
@@ -268,22 +308,7 @@ export default function RecordSalesForm({
       .catch(console.error)
   }, [No])
 
-  // Load lookup data once
-  useEffect(() => {
-    fetch(`${API_BASE_URL}/vivoproducts`, {
-      headers: { Authorization: API_AUTHORIZATION },
-    })
-      .then(r => r.json())
-      .then(d => setProducts(d.value || []))
-      .catch(console.error)
-
-    fetch(`${API_BASE_URL}/LubricantSKUs`, {
-      headers: { Authorization: API_AUTHORIZATION },
-    })
-      .then(r => r.json())
-      .then(d => setSKU(d.value || []))
-      .catch(console.error)
-  }, [])
+  // Removed the useEffect for fetching products and SKUs as they are now passed as props
 
   // Prevent form submit on Enter
   const handleSubmit = (e: FormEvent) => {
@@ -438,21 +463,28 @@ export default function RecordSalesForm({
                       <TableCell>
                         <p className="text-right">{item.Target.toFixed(2)}</p>
                       </TableCell>
+                      {/* SKU Searchable Input */}
                       <TableCell>
-                        <select
+                        <Input
+                          list={`sku-options-${idx}`} // Link to datalist
                           className="w-full border rounded px-2 py-1"
                           disabled={item.isUpdating}
+                          // Display the current SKU_Code.
+                          // When a datalist option is selected, its value (SKU_Code) populates this input.
                           value={item.SKU_Code ?? ''}
                           onChange={e => handleSKUChange(idx, e.target.value)}
-                        >
-                          <option value="">Select SKU</option>
-                          {SKU.map(s => (
+                          placeholder="Search SKU"
+                        />
+                        <datalist id={`sku-options-${idx}`}>
+                          {/* Options display SKU_Name but their value is SKU_Code */}
+                          {filteredSKUs.map(s => (
                             <option key={s.SKU_Code} value={s.SKU_Code}>
                               {s.SKU_Name}
                             </option>
                           ))}
-                        </select>
+                        </datalist>
                       </TableCell>
+                      {/* End SKU Searchable Input */}
                       <TableCell>
                         <p className="text-right">
                           {item.SKU_Liters.toFixed(3)}

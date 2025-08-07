@@ -43,5 +43,3 @@ next-env.d.ts
 *.metadata.json
 # env production files
 .env.production
-# env deploy files
-.env.deploy

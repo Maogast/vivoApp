@@ -247,7 +247,7 @@ export default function RecordSalesEditView({ // Renamed component
           <DialogHeader>
             <DialogTitle>Sale No: {No}</DialogTitle>
             <DialogDescription>
-              Review or adjust line items, then send for approval.
+              Verify the sale,if correct then Resend for Approval .
             </DialogDescription>
           </DialogHeader>
 
@@ -328,9 +328,9 @@ export default function RecordSalesEditView({ // Renamed component
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {lineItems.map((item) => ( // Removed idx from map function as it's not needed in key
+                  {lineItems.map((item, idx) => (
                     <TableRow
-                      key={`${item.No}-${item.SN}`} // Key now relies solely on item.No and item.SN
+                      key={`${item.No}-${item.SN}`}
                       className="even:bg-gray-50"
                     >
                       <TableCell className="font-medium">
@@ -343,7 +343,7 @@ export default function RecordSalesEditView({ // Renamed component
                           disabled={item.isUpdating}
                           value={item.Product_Code ?? ''}
                           onChange={e =>
-                            handleProductChange(lineItems.indexOf(item), e.target.value) // Use indexOf for idx
+                            handleProductChange(idx, e.target.value)
                           }
                         >
                           <option value="">Select Product</option>
@@ -362,7 +362,7 @@ export default function RecordSalesEditView({ // Renamed component
                           className="w-full border rounded px-2 py-1"
                           disabled={item.isUpdating}
                           value={item.SKU_Code ?? ''}
-                          onChange={e => handleSKUChange(lineItems.indexOf(item), e.target.value)} // Use indexOf for idx
+                          onChange={e => handleSKUChange(idx, e.target.value)}
                         >
                           <option value="">Select SKU</option>
                           {SKU.map(s => (
@@ -387,7 +387,7 @@ export default function RecordSalesEditView({ // Renamed component
                           disabled={item.isUpdating}
                           value={item.Quantity}
                           onChange={e =>
-                            handleQuantityChange(lineItems.indexOf(item), Number(e.target.value)) // Use indexOf for idx
+                            handleQuantityChange(idx, Number(e.target.value))
                           }
                         />
                       </TableCell>
@@ -417,7 +417,7 @@ export default function RecordSalesEditView({ // Renamed component
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handleAddEmptyLineAfter(lineItems.indexOf(item))} // Use indexOf for idx
+                              onClick={() => handleAddEmptyLineAfter(idx)}
                               disabled={isApproving}
                             >
                               +
@@ -425,7 +425,7 @@ export default function RecordSalesEditView({ // Renamed component
                             <Button
                               variant="destructive"
                               size="sm"
-                              onClick={() => handleDeleteLine(lineItems.indexOf(item))} // Use indexOf for idx
+                              onClick={() => handleDeleteLine(idx)}
                               disabled={isApproving}
                             >
                               ×

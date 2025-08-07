@@ -1,3 +1,6 @@
+// app/dashboard/pending-sales/page.tsx
+// This file is part of the Vivo Sales Dashboard application.
+// It fetches and displays pending sales records for the logged-in user.
 import React from 'react'
 import { redirect } from 'next/navigation'
 import { getUserFromServer } from '@/lib/get-user.server' // Updated import path

@@ -1,3 +1,6 @@
+// components/Auth/Login.tsx
+// This component handles user login functionality for the Vivo Sales Dashboard application.
+// It allows users to enter their username and password, and upon successful login, redirects them to the dashboard.
 'use client'
 
 import React, { useState } from 'react'

@@ -1,4 +1,6 @@
-
+// components/Auth/login-service.ts
+// This module handles user login functionality for the Vivo Sales Dashboard application.
+// It fetches user data from the API and stores it in cookies and local storage.
 import { API_AUTHORIZATION, API_BASE_URL } from "@/lib/constants";
 import { VivoUser } from "@/types";
 
