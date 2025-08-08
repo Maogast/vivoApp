@@ -1,6 +1,6 @@
 // components/RecordSales/RecordSalesForm.tsx
-// This component is responsible for displaying and managing the sales records form.
-// It includes functionality to add, update, and delete sales lines, as well as submit the form for approval.
+// This component displays and manages the sales records form.
+// It supports adding, updating, deleting lines, sending for approval, and canceling the header.
 'use client'
 
 import React, { useEffect, useState, FormEvent, useMemo } from 'react'
@@ -27,7 +27,12 @@ import {
 } from '@/components/ui/table'
 import { API_AUTHORIZATION, API_BASE_URL } from '@/lib/constants'
 import { submitForApproval } from '@/lib/api'
-import { VivoProduct, ProductSKU } from '@/types'
+
+import type {
+  VivoSalesHeader,
+  VivoProduct,
+  ProductSKU,
+} from '@/types'
 
 interface SalesLine {
   Officer_Code: any
@@ -37,7 +42,7 @@ interface SalesLine {
   Role_Name: string
   Product_Code?: string
   Target: number
-  SKU_Code?: string // SKU_Code can be undefined
+  SKU_Code?: string
   SKU_Liters: number
   Grade: string
   Quantity: number
@@ -55,44 +60,56 @@ type Toast = {
 
 interface RecordSalesFormProps {
   No: string
-  header: {
-    Region_Name: string
-    Region_Code: string
-    Outlet_Name: string
-    Outlet_Code: string
-  }
+
+  // Re-use shared header type with exactly the fields this form needs
+  header: Pick<
+    VivoSalesHeader,
+    '@odata.etag' | 'Region_Name' | 'Region_Code' | 'Outlet_Name' | 'Outlet_Code'
+  >
+
   onClose: () => void
-  products: VivoProduct[]; // Receive products as prop
-  SKU: ProductSKU[];       // Receive SKU as prop
+  products: VivoProduct[]
+  SKU: ProductSKU[]
 }
 
 export default function RecordSalesForm({
   No,
   header,
   onClose,
-  products, // Destructure from props
-  SKU,       // Destructure from props
+  products,
+  SKU,
 }: RecordSalesFormProps) {
   const [lineItems, setLineItems] = useState<SalesLine[]>([])
   const [toast, setToast] = useState<Toast | null>(null)
   const [isApproving, setIsApproving] = useState(false)
+  const [isCancelling, setIsCancelling] = useState(false)
 
-  /**
-   * Memoized SKU list. For a datalist, we typically provide all available options,
-   * and the browser handles the filtering based on the input.
-   */
-  const filteredSKUs = useMemo(() => {
-    return SKU;
-  }, [SKU]); // Now depends on SKU prop
+  // Provide SKUs for the datalist
+  const filteredSKUs = useMemo(() => SKU, [SKU])
 
-  // Auto-dismiss toast after 3s
+  // Auto-dismiss toast after 3 seconds
   useEffect(() => {
     if (!toast) return
-    const timer = setTimeout(() => setToast(null), 3000)
-    return () => clearTimeout(timer)
+    const t = setTimeout(() => setToast(null), 3000)
+    return () => clearTimeout(t)
   }, [toast])
 
-  // Low-level PATCH helper
+  // Load existing sales lines when No changes
+  useEffect(() => {
+    if (!No) return
+    fetch(`${API_BASE_URL}/NewSalesLines?$filter=No eq '${No}'`, {
+      headers: { Authorization: API_AUTHORIZATION },
+    })
+      .then((r) => r.json())
+      .then((d) =>
+        setLineItems(
+          (d.value || []).map((row: any) => ({ ...row, isUpdating: false }))
+        )
+      )
+      .catch(console.error)
+  }, [No])
+
+  // Low-level helper to PATCH a line
   async function patchLine(
     no: string,
     sn: number,
@@ -116,17 +133,15 @@ export default function RecordSalesForm({
     return res.json()
   }
 
-  // Per-row updater
+  // Generic per-row updater
   async function handlePatch(
     idx: number,
     payload: Partial<SalesLine>,
     field: string
   ) {
-    // set updating flag
-    setLineItems(rows =>
+    setLineItems((rows) =>
       rows.map((r, i) => (i === idx ? { ...r, isUpdating: true } : r))
     )
-
     const row = lineItems[idx]
     try {
       const updated = await patchLine(
@@ -135,7 +150,7 @@ export default function RecordSalesForm({
         payload,
         row['@odata.etag']
       )
-      setLineItems(rows =>
+      setLineItems((rows) =>
         rows.map((r, i) =>
           i === idx
             ? {
@@ -150,113 +165,83 @@ export default function RecordSalesForm({
       setToast({ type: 'success', message: `${field} updated` })
     } catch (err: any) {
       console.error(err)
-      setLineItems(rows =>
+      setLineItems((rows) =>
         rows.map((r, i) => (i === idx ? { ...r, isUpdating: false } : r))
       )
       setToast({ type: 'error', message: `Failed to update ${field}` })
     }
   }
 
-  // Field-specific handlers
+  // Handlers for specific fields
   const handleProductChange = (i: number, code: string) =>
     handlePatch(i, { Product_Code: code }, 'Product')
-
-  /**
-   * Handles changes to the SKU input field.
-   * If a valid SKU Code (from datalist selection) is entered, it updates the SKU_Code.
-   * If the input is cleared, it sets SKU_Code to undefined, allowing re-selection.
-   * If an invalid SKU is typed, it clears the SKU_Code and shows an error.
-   * @param idx The index of the line item.
-   * @param inputCode The SKU_Code (or empty string if cleared) from the input.
-   */
-  const handleSKUChange = (idx: number, inputCode: string) => {
-    // If the input is cleared, set SKU_Code to undefined
-    if (inputCode === '') {
-      handlePatch(idx, { SKU_Code: undefined }, 'SKU');
-      return;
-    }
-
-    // Find if the inputCode matches any SKU_Code from the fetched list
-    const matchedSKU = SKU.find(s => s.SKU_Code === inputCode);
-
-    if (matchedSKU) {
-      // If a valid SKU is found, update the SKU_Code
-      handlePatch(idx, { SKU_Code: matchedSKU.SKU_Code }, 'SKU');
-    } else {
-      // If no match is found, it means the user typed something invalid or incomplete.
-      // Clear the SKU_Code for this line item and show an error toast.
-      console.warn(`Invalid SKU entered for line ${idx}: ${inputCode}. Clearing SKU.`);
-      handlePatch(idx, { SKU_Code: undefined }, 'SKU'); // Clear the SKU if it's not a valid match
-      setToast({ type: 'error', message: `Invalid SKU: '${inputCode}'. Please select from the list.` });
-    }
-  };
 
   const handleQuantityChange = (i: number, qty: number) =>
     handlePatch(i, { Quantity: qty }, 'Quantity')
 
-  /**
-   * Deletes a sales line from the API and updates the local state.
-   * @param idx The index of the line item to delete.
-   */
-  async function handleDeleteLine(idx: number) {
-    const itemToDelete = lineItems[idx]
-    if (!itemToDelete) return
+  const handleSKUChange = (idx: number, inputCode: string) => {
+    if (inputCode === '') {
+      handlePatch(idx, { SKU_Code: undefined }, 'SKU')
+      return
+    }
+    const match = SKU.find((s) => s.SKU_Code === inputCode)
+    if (match) {
+      handlePatch(idx, { SKU_Code: match.SKU_Code }, 'SKU')
+    } else {
+      console.warn(`Invalid SKU on line ${idx}: ${inputCode}`)
+      handlePatch(idx, { SKU_Code: undefined }, 'SKU')
+      setToast({
+        type: 'error',
+        message: `Invalid SKU '${inputCode}'. Please select from the list.`,
+      })
+    }
+  }
 
-    // Set updating flag for the row
-    setLineItems(rows =>
+  // Delete a line via DELETE
+  async function handleDeleteLine(idx: number) {
+    const item = lineItems[idx]
+    if (!item) return
+    setLineItems((rows) =>
       rows.map((r, i) => (i === idx ? { ...r, isUpdating: true } : r))
     )
-
-    const url = `${API_BASE_URL}/NewSalesLines(No='${itemToDelete.No}',SN=${itemToDelete.SN})`
+    const url = `${API_BASE_URL}/NewSalesLines(No='${item.No}',SN=${item.SN})`
     try {
       const res = await fetch(url, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
           Authorization: API_AUTHORIZATION,
-          'If-Match': itemToDelete['@odata.etag'],
+          'If-Match': item['@odata.etag'],
         },
       })
-
       if (!res.ok) {
         const txt = await res.text()
         throw new Error(`HTTP ${res.status}: ${txt}`)
       }
-
-      setLineItems(rows => rows.filter((_, i) => i !== idx))
-      setToast({ type: 'success', message: 'Sales line deleted successfully.' })
+      setLineItems((rows) => rows.filter((_, i) => i !== idx))
+      setToast({ type: 'success', message: 'Line deleted.' })
     } catch (err: any) {
       console.error(err)
-      setLineItems(rows =>
+      setLineItems((rows) =>
         rows.map((r, i) => (i === idx ? { ...r, isUpdating: false } : r))
       )
-      setToast({
-        type: 'error',
-        message: `Failed to delete sales line: ${err.message}`,
-      })
+      setToast({ type: 'error', message: `Delete failed: ${err.message}` })
     }
   }
 
-  /**
-   * Adds a new, empty sales line via the API and inserts it below the specified index.
-   * Based on the "Control 'Officer Name' is read-only" error, the backend
-   * automatically populates user details, so we should only send the 'No'
-   * to create the new line item.
-   */
+  // Add an empty line via POST
   async function handleAddEmptyLineAfter(idx: number) {
     const row = lineItems[idx]
     if (!row) return
-
-    setLineItems(rows =>
+    setLineItems((rows) =>
       rows.map((r, i) => (i === idx ? { ...r, isUpdating: true } : r))
     )
-
-    // The most minimal and safest payload is just the 'No' to link the new line.
-    // The backend should handle generating the rest of the fields with default values.
-    const newPayload = { No: row.No, Officer_Code: row.Officer_Code, Product_Code: row.Product_Code }
-
+    const payload = {
+      No: row.No,
+      Officer_Code: row.Officer_Code,
+      Product_Code: row.Product_Code,
+    }
     const url = `${API_BASE_URL}/NewSalesLines`
-    console.log('Sending POST request to:', url, 'with payload:', newPayload)
     try {
       const res = await fetch(url, {
         method: 'POST',
@@ -264,67 +249,40 @@ export default function RecordSalesForm({
           'Content-Type': 'application/json',
           Authorization: API_AUTHORIZATION,
         },
-        body: JSON.stringify(newPayload),
+        body: JSON.stringify(payload),
       })
-
       if (!res.ok) {
         const txt = await res.text()
         throw new Error(`HTTP ${res.status}: ${txt}`)
       }
-
       const newLine = await res.json()
-      setLineItems(rows => {
-        const newRows = [...rows]
-        // Insert the new line after the current index
-        newRows.splice(idx + 1, 0, { ...newLine, isUpdating: false })
-        // Set the original row back to not updating
-        return newRows.map((r, i) => (i === idx ? { ...r, isUpdating: false } : r))
+      setLineItems((rows) => {
+        const updated = [...rows]
+        updated.splice(idx + 1, 0, { ...newLine, isUpdating: false })
+        return updated.map((r, i) =>
+          i === idx ? { ...r, isUpdating: false } : r
+        )
       })
-      setToast({ type: 'success', message: 'New sales line added.' })
+      setToast({ type: 'success', message: 'New line added.' })
     } catch (err: any) {
       console.error(err)
-      setLineItems(rows =>
+      setLineItems((rows) =>
         rows.map((r, i) => (i === idx ? { ...r, isUpdating: false } : r))
       )
-      setToast({
-        type: 'error',
-        message: `Failed to add new sales line: ${err.message}`,
-      })
+      setToast({ type: 'error', message: `Add failed: ${err.message}` })
     }
   }
 
-  // Load line items on mount / No change
-  useEffect(() => {
-    if (!No) return
-    fetch(`${API_BASE_URL}/NewSalesLines?$filter=No eq '${No}'`, {
-      headers: { Authorization: API_AUTHORIZATION },
-    })
-      .then(r => r.json())
-      .then(d =>
-        setLineItems(
-          (d.value || []).map((row: any) => ({ ...row, isUpdating: false }))
-        )
-      )
-      .catch(console.error)
-  }, [No])
-
-  // Removed the useEffect for fetching products and SKUs as they are now passed as props
-
   // Prevent form submit on Enter
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault()
-  }
+  const handleSubmit = (e: FormEvent) => e.preventDefault()
 
-  // Send for approval
+  // Send for Approval
   const handleSendForApproval = async () => {
     setIsApproving(true)
     setToast(null)
-
     try {
       await submitForApproval(No)
       setToast({ type: 'success', message: 'Sent for approval' })
-
-      // NEW: Delay closing the dialog to allow the user to see the success toast.
       setTimeout(onClose, 3000)
     } catch (err: any) {
       console.error(err)
@@ -334,16 +292,54 @@ export default function RecordSalesForm({
     }
   }
 
+  // Cancel the entire header on the backend
+const handleCancelHeader = async () => {
+  if (isApproving || isCancelling) return
+  setIsCancelling(true)
+  setToast(null)
+
+  try {
+    // ← use key‐as‐segment syntax here
+    const url = `${API_BASE_URL}/SalesHeaders('${No}')`
+    const res = await fetch(url, {
+      method: 'DELETE',
+      headers: {
+        Authorization: API_AUTHORIZATION,
+        'If-Match': header['@odata.etag'],
+      },
+    })
+
+    if (!res.ok) {
+      const txt = await res.text()
+      throw new Error(txt || `HTTP ${res.status}`)
+    }
+
+    setToast({ type: 'success', message: 'Sale cancelled' })
+    setTimeout(onClose, 1500)
+  } catch (err: any) {
+    console.error(err)
+    setToast({ type: 'error', message: `Cancel failed: ${err.message}` })
+  } finally {
+    setIsCancelling(false)
+  }
+}
+
+
   return (
-    <Dialog open={!!No} onOpenChange={(open: boolean) => !open && onClose()}>
+    <Dialog open={!!No} onOpenChange={(open) => !open && onClose()}>
       {toast && (
         <div
-          className={`fixed top-4 right-4 z-[99] p-4 rounded-lg shadow-lg flex items-center gap-2 transition-all duration-300 ease-in-out transform
-          ${toast.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}
-          ${toast.type === 'success' ? 'animate-fade-in-down' : 'animate-fade-in-down'}`}
+          className={`
+            fixed top-4 right-4 z-[99] p-4 rounded-lg shadow-lg flex items-center gap-2
+            ${toast.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}
+          `}
         >
           <Icon
-            icon={toast.type === 'success' ? 'tabler:circle-check-filled' : 'tabler:circle-x-filled'}
+            icon={
+              toast.type === 'success'
+                ? 'tabler:circle-check-filled'
+                : 'tabler:circle-x-filled'
+            }
             className="text-xl"
           />
           <span className="font-semibold">{toast.message}</span>
@@ -355,7 +351,7 @@ export default function RecordSalesForm({
           <DialogHeader>
             <DialogTitle>Sale No: {No}</DialogTitle>
             <DialogDescription>
-              Review or adjust line items, then send for approval.
+              Review or adjust line items, then approve or cancel.
             </DialogDescription>
           </DialogHeader>
 
@@ -400,13 +396,17 @@ export default function RecordSalesForm({
             </div>
 
             <div className="flex space-x-2">
-              <Button variant="outline" onClick={onClose}>
-                Cancel
+              <Button
+                variant="outline"
+                onClick={handleCancelHeader}
+                disabled={isApproving || isCancelling}
+              >
+                {isCancelling ? 'Cancelling…' : 'Cancel'}
               </Button>
               <Button
                 type="button"
                 onClick={handleSendForApproval}
-                disabled={isApproving}
+                disabled={isApproving || isCancelling}
               >
                 {isApproving ? 'Sending…' : 'Send for Approval'}
               </Button>
@@ -448,12 +448,12 @@ export default function RecordSalesForm({
                           className="w-full border rounded px-2 py-1"
                           disabled={item.isUpdating}
                           value={item.Product_Code ?? ''}
-                          onChange={e =>
+                          onChange={(e) =>
                             handleProductChange(idx, e.target.value)
                           }
                         >
                           <option value="">Select Product</option>
-                          {products.map(p => (
+                          {products.map((p) => (
                             <option key={p.Code} value={p.Code}>
                               {p.Description}
                             </option>
@@ -463,28 +463,25 @@ export default function RecordSalesForm({
                       <TableCell>
                         <p className="text-right">{item.Target.toFixed(2)}</p>
                       </TableCell>
-                      {/* SKU Searchable Input */}
                       <TableCell>
                         <Input
-                          list={`sku-options-${idx}`} // Link to datalist
+                          list={`sku-options-${idx}`}
                           className="w-full border rounded px-2 py-1"
                           disabled={item.isUpdating}
-                          // Display the current SKU_Code.
-                          // When a datalist option is selected, its value (SKU_Code) populates this input.
                           value={item.SKU_Code ?? ''}
-                          onChange={e => handleSKUChange(idx, e.target.value)}
+                          onChange={(e) =>
+                            handleSKUChange(idx, e.target.value)
+                          }
                           placeholder="Search SKU"
                         />
                         <datalist id={`sku-options-${idx}`}>
-                          {/* Options display SKU_Name but their value is SKU_Code */}
-                          {filteredSKUs.map(s => (
+                          {filteredSKUs.map((s) => (
                             <option key={s.SKU_Code} value={s.SKU_Code}>
                               {s.SKU_Name}
                             </option>
                           ))}
                         </datalist>
                       </TableCell>
-                      {/* End SKU Searchable Input */}
                       <TableCell>
                         <p className="text-right">
                           {item.SKU_Liters.toFixed(3)}
@@ -499,20 +496,16 @@ export default function RecordSalesForm({
                           className="w-[80px] text-right"
                           disabled={item.isUpdating}
                           value={item.Quantity}
-                          onChange={e =>
+                          onChange={(e) =>
                             handleQuantityChange(idx, Number(e.target.value))
                           }
                         />
                       </TableCell>
                       <TableCell>
-                        <p className="text-right">
-                          {item.Total.toFixed(3)}
-                        </p>
+                        <p className="text-right">{item.Total.toFixed(3)}</p>
                       </TableCell>
                       <TableCell>
-                        <p className="text-right">
-                          {item.SKU_Ratio.toFixed(3)}
-                        </p>
+                        <p className="text-right">{item.SKU_Ratio.toFixed(3)}</p>
                       </TableCell>
                       <TableCell>
                         <p className="text-right">
@@ -531,7 +524,7 @@ export default function RecordSalesForm({
                               variant="outline"
                               size="sm"
                               onClick={() => handleAddEmptyLineAfter(idx)}
-                              disabled={isApproving}
+                              disabled={isApproving || isCancelling}
                             >
                               +
                             </Button>
@@ -539,7 +532,7 @@ export default function RecordSalesForm({
                               variant="destructive"
                               size="sm"
                               onClick={() => handleDeleteLine(idx)}
-                              disabled={isApproving}
+                              disabled={isApproving || isCancelling}
                             >
                               ×
                             </Button>

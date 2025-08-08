@@ -1,3 +1,6 @@
+// components/RecordSales/actions.ts
+// This file contains server-side actions related to sales headers.
+// It includes functionality to create a new sales header and handle form submissions.
 'use server'
 
 import { createData } from "@/lib/api";

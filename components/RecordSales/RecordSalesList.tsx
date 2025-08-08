@@ -1,10 +1,10 @@
 // components/RecordSales/RecordSalesList.tsx
 // This component displays a list of sales records with options to create new headers and edit existing records.
 // It uses a table to present the data and includes functionality for viewing details of each sale.
-'use client'
+'use client';
 
-import React, { useMemo, useState } from 'react'
-import Link from 'next/link'
+import React, { useMemo, useState, useEffect } from 'react';
+import Link from 'next/link';
 import {
   Table,
   TableBody,
@@ -14,40 +14,64 @@ import {
   TableRow,
   TableCaption,
   TableFooter,
-} from '@/components/ui/table'
-import { Card } from '../ui/card'
-import { Badge } from '../ui/badge'
-import { Button } from '../ui/button'
-import CreateNewHeaderCopy from './CreateNewHeaderCopy'
-import RecordSalesEditView from './RecordSalesEditView' // Updated import name
-import { VivoSalesHeader } from '@/types'
-import { Input } from '../ui/input' // Import Input for filter fields
-import { Label } from '../ui/label' // Import Label for filter fields
-import { ChevronDown, ChevronUp } from 'lucide-react'; // Import icons for collapsible
+} from '@/components/ui/table';
+import { Card } from '../ui/card';
+import { Badge } from '../ui/badge';
+import { Button } from '../ui/button';
+import CreateNewHeaderCopy from './CreateNewHeaderCopy';
+import RecordSalesEditView from './RecordSalesEditView';
+import { VivoSalesHeader, VivoProduct, ProductSKU } from '@/types';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from '@/components/ui/collapsible'; // Import Collapsible components
+} from '@/components/ui/collapsible';
 
+import { fetchVivoProducts, fetchLubricantSKUs } from '@/lib/api';
 
 interface Props {
-  data: VivoSalesHeader[]
+  data: VivoSalesHeader[];
 }
 
 export function RecordSalesList({ data }: Props) {
   const [selectedSaleNo, setSelectedSaleNo] = useState<string | null>(null);
   const [isRecordSalesEditViewOpen, setIsRecordSalesEditViewOpen] = useState(false);
-  const [isFilterOpen, setIsFilterOpen] = useState(true); // State to manage collapsible filter
+  const [isFilterOpen, setIsFilterOpen] = useState(true);
 
-  // State for filter inputs
   const [filterNo, setFilterNo] = useState<string>('');
   const [filterSalesDate, setFilterSalesDate] = useState<string>('');
   const [filterRegionName, setFilterRegionName] = useState<string>('');
   const [filterOutletName, setFilterOutletName] = useState<string>('');
 
+  const [products, setProducts] = useState<VivoProduct[]>([]);
+  const [SKU, setSKU] = useState<ProductSKU[]>([]);
+  const [isLoadingLookups, setIsLoadingLookups] = useState(true);
+  const [lookupError, setLookupError] = useState<string | null>(null);
 
-  // Memoized filtered data based on input filters
+  useEffect(() => {
+    const loadLookupData = async () => {
+      setIsLoadingLookups(true);
+      setLookupError(null);
+      try {
+        const productsData = await fetchVivoProducts();
+        setProducts(productsData);
+
+        const skuData = await fetchLubricantSKUs();
+        setSKU(skuData);
+      } catch (error: any) {
+        console.error('Failed to fetch lookup data:', error);
+        setLookupError('Failed to load product and SKU data.');
+      } finally {
+        setIsLoadingLookups(false);
+      }
+    };
+
+    loadLookupData();
+  }, []);
+
   const filteredData = useMemo(() => {
     return data.filter(sale => {
       const matchesNo = filterNo
@@ -67,18 +91,22 @@ export function RecordSalesList({ data }: Props) {
     });
   }, [data, filterNo, filterSalesDate, filterRegionName, filterOutletName]);
 
-  // compute grand totals based on filtered data
   const { totalTarget, totalAchieved, totalCommission } = useMemo(() => {
     return filteredData.reduce(
       (acc, s) => {
-        acc.totalTarget += s.Total_Target ?? 0
-        acc.totalAchieved += s.Total_Achieved ?? 0
-        acc.totalCommission += s.Total_Commission_Earned ?? 0
-        return acc
+        acc.totalTarget += s.Total_Target ?? 0;
+        acc.totalAchieved += s.Total_Achieved ?? 0;
+        acc.totalCommission += s.Total_Commission_Earned ?? 0;
+        return acc;
       },
       { totalTarget: 0, totalAchieved: 0, totalCommission: 0 }
-    )
-  }, [filteredData])
+    );
+  }, [filteredData]);
+
+  const selectedHeader = useMemo(() => {
+    return filteredData.find(s => s.No === selectedSaleNo);
+  }, [selectedSaleNo, filteredData]);
+
 
   const handleOpenRecordSalesEditView = (saleNo: string) => {
     setSelectedSaleNo(saleNo);
@@ -90,6 +118,14 @@ export function RecordSalesList({ data }: Props) {
     setIsRecordSalesEditViewOpen(false);
   };
 
+  if (isLoadingLookups) {
+    return <div className="text-center py-8">Loading products and SKU data...</div>;
+  }
+
+  if (lookupError) {
+    return <div className="text-center py-8 text-red-500">Error: {lookupError}</div>;
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
@@ -97,7 +133,6 @@ export function RecordSalesList({ data }: Props) {
         <CreateNewHeaderCopy />
       </div>
 
-      {/* Collapsible Filter Section */}
       <Collapsible
         open={isFilterOpen}
         onOpenChange={setIsFilterOpen}
@@ -180,6 +215,7 @@ export function RecordSalesList({ data }: Props) {
               <TableHead>Sales Date</TableHead>
               <TableHead>Date Captured</TableHead>
               <TableHead>Time Captured</TableHead>
+              <TableHead>Captured By</TableHead>{/* Added Captured By TableHead */}
               <TableHead className="text-right">Target (Ltrs)</TableHead>
               <TableHead className="text-right">Achieved (Ltrs)</TableHead>
               <TableHead className="text-right">Commission (KES)</TableHead>
@@ -191,7 +227,7 @@ export function RecordSalesList({ data }: Props) {
             {filteredData.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={12}
+                  colSpan={13} // Increased colspan to accommodate new column
                   className="text-center text-muted-foreground"
                 >
                   No sales records found matching your filters.
@@ -213,6 +249,7 @@ export function RecordSalesList({ data }: Props) {
                 <TableCell>{sale.Sales_Date}</TableCell>
                 <TableCell>{sale.Date_Captured}</TableCell>
                 <TableCell>{sale.Time_Captured}</TableCell>
+                <TableCell>{sale.Captured_By}</TableCell>{/* Added Captured By TableCell */}
                 <TableCell className="text-right">
                   {sale.Total_Target.toFixed(2)}
                 </TableCell>
@@ -236,7 +273,7 @@ export function RecordSalesList({ data }: Props) {
           {filteredData.length > 0 && (
             <TableFooter>
               <TableRow>
-                <TableCell colSpan={8}>Totals</TableCell>
+                <TableCell colSpan={9}>Totals</TableCell>{/* Increased colspan */}
                 <TableCell className="text-right">
                   {totalTarget.toFixed(2)}
                 </TableCell>
@@ -254,14 +291,17 @@ export function RecordSalesList({ data }: Props) {
       </Card>
 
       {/* Render RecordSalesEditView when a sale is selected */}
-      {isRecordSalesEditViewOpen && selectedSaleNo && (
+      {isRecordSalesEditViewOpen && selectedSaleNo && selectedHeader && (
         <RecordSalesEditView
           No={selectedSaleNo}
-          header={filteredData.find(s => s.No === selectedSaleNo) || { Region_Name: '', Region_Code: '', Outlet_Name: '', Outlet_Code: '' }}
+          header={selectedHeader}
           onClose={handleCloseRecordSalesEditView}
           isOpen={isRecordSalesEditViewOpen}
+          products={products}
+          SKU={SKU}
+          isEditable={false} // Set to false to make lines non-editable
         />
       )}
     </div>
-  )
+  );
 }

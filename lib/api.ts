@@ -1,3 +1,4 @@
+// lib/api.ts
 import { API_AUTHORIZATION } from './constants'
 import { endpoints } from './endpoints'
 import {
@@ -172,10 +173,11 @@ export async function fetchSalesLines(saleNo: string): Promise<SalesLine[]> {
     Total: row.Total || 0, // Map Total, provide default
     SKU_Ratio: row.SKU_Ratio || 0, // Map SKU_Ratio, provide default
     // Provide default or derived values for properties not in RawVivoSalesLine
-    Officer_Name: '',
-    Role_Name: '',
-    Product_Code: '',
-    Target: 0,
+    Officer_Code: row.Officer_Code || '', // Ensure Officer_Code is mapped
+    Officer_Name: row.Officer_Name || '', // Ensure Officer_Name is mapped
+    Role_Name: row.Role_Name || '', // Ensure Role_Name is mapped
+    Product_Code: row.Product_Code || '', // Ensure Product_Code is mapped
+    Target: row.Target || 0, // Ensure Target is mapped
     isUpdating: false
   }));
 }
@@ -183,12 +185,36 @@ export async function fetchSalesLines(saleNo: string): Promise<SalesLine[]> {
 /**
  * Adds a new sales line to a sale.
  * @param saleNo The sale number to which the new line will be added.
+ * @param officerCode The code of the officer associated with this sales line.
+ * @param productCode The code of the product associated with this sales line.
  * @returns The newly created sales line object from the API.
  */
-export async function addSalesLine(saleNo: string): Promise<SalesLine> {
+export async function addSalesLine(
+  saleNo: string,
+  officerCode: string,
+  productCode: string
+): Promise<SalesLine> {
   const url = endpoints.recordSales.newSalesLines();
   // Construct payload for API based on RawVivoSalesLine structure
-  const payload: Partial<RawVivoSalesLine> = { No: saleNo }; // Only No is needed for adding a new line
+  const payload: Partial<RawVivoSalesLine> = {
+    No: saleNo,
+    Officer_Code: officerCode, // Include Officer_Code
+    Product_Code: productCode, // Include Product_Code
+    // Provide default values for other required fields if the API expects them on creation
+    // These might be empty strings or 0 depending on your backend's requirements for a new line.
+    Line_No: 0, // Placeholder, usually assigned by backend
+    SKU_Code: '',
+    SKU_Name: '',
+    Litres_Sold: 0,
+    Commission_Earned: 0,
+    Grade: '',
+    Quantity: 0,
+    Total: 0,
+    SKU_Ratio: 0,
+    Officer_Name: '', // Placeholder
+    Role_Name: '', // Placeholder
+    Target: 0, // Placeholder
+  };
   const newLine = await createData<typeof payload, RawVivoSalesLine>(url, payload); // Expect RawVivoSalesLine from API
   return {
     No: newLine.No,
@@ -202,11 +228,12 @@ export async function addSalesLine(saleNo: string): Promise<SalesLine> {
     Quantity: newLine.Quantity || 0,
     Total: newLine.Total || 0,
     SKU_Ratio: newLine.SKU_Ratio || 0,
-    // Provide default or derived values for properties not in RawVivoSalesLine
-    Officer_Name: '',
-    Role_Name: '',
-    Product_Code: '',
-    Target: 0,
+    // Map the newly provided fields back
+    Officer_Code: newLine.Officer_Code || '', // Ensure mapped
+    Officer_Name: newLine.Officer_Name || '', // Ensure mapped
+    Role_Name: newLine.Role_Name || '', // Ensure mapped
+    Product_Code: newLine.Product_Code || '', // Ensure mapped
+    Target: newLine.Target || 0, // Ensure mapped
     isUpdating: false
   };
 }
@@ -228,8 +255,8 @@ export async function updateSalesLine(
   const url = endpoints.recordSales.salesLineItem(saleNo, sn);
   // Map payload from SalesLine (component type) to RawVivoSalesLine (API type)
   const apiPayload: Partial<RawVivoSalesLine> = {
-    No: payload.No,
-    Line_No: payload.SN,
+    // No: payload.No, // No is part of the URL, not typically in PATCH body
+    // Line_No: payload.SN, // Line_No is part of the URL, not typically in PATCH body
     SKU_Code: payload.SKU_Code,
     Litres_Sold: payload.SKU_Liters, // Map SKU_Liters back to Litres_Sold for API
     Grade: payload.Grade,
@@ -238,6 +265,12 @@ export async function updateSalesLine(
     Quantity: payload.Quantity,
     Total: payload.Total,
     SKU_Ratio: payload.SKU_Ratio,
+    // Include Officer_Code and Product_Code if they are patchable
+    Officer_Code: payload.Officer_Code,
+    Product_Code: payload.Product_Code,
+    Officer_Name: payload.Officer_Name, // Include if patchable
+    Role_Name: payload.Role_Name, // Include if patchable
+    Target: payload.Target, // Include if patchable
   };
   const updatedLine = await updateData<Partial<RawVivoSalesLine>, RawVivoSalesLine>(url, apiPayload, {
     headers: { 'If-Match': etag },
@@ -255,10 +288,11 @@ export async function updateSalesLine(
     Total: updatedLine.Total || 0,
     SKU_Ratio: updatedLine.SKU_Ratio || 0,
     // Provide default or derived values for properties not in RawVivoSalesLine
-    Officer_Name: payload.Officer_Name || '', // Retain existing if not updated by API
-    Role_Name: payload.Role_Name || '',
-    Product_Code: payload.Product_Code || '',
-    Target: payload.Target || 0,
+    Officer_Code: updatedLine.Officer_Code || '', // Ensure mapped from API response
+    Officer_Name: updatedLine.Officer_Name || '', // Ensure mapped from API response
+    Role_Name: updatedLine.Role_Name || '', // Ensure mapped from API response
+    Product_Code: updatedLine.Product_Code || '', // Ensure mapped from API response
+    Target: updatedLine.Target || 0, // Ensure mapped from API response
     isUpdating: false
   };
 }

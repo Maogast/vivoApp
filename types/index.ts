@@ -59,6 +59,13 @@ export interface VivoSalesLine {
   Quantity: number; // Explicitly include Quantity
   Total: number; // Explicitly include Total
   SKU_Ratio: number; // Explicitly include SKU_Ratio
+  // --- Properties added to resolve TypeScript errors ---
+  Officer_Code: string; // Added: Represents the code for the sales officer
+  Officer_Name: string; // Added: Represents the name of the sales officer
+  Role_Name: string;    // Added: Represents the role of the sales officer
+  Product_Code: string; // Added: Represents the code of the product sold
+  Target: number;       // Added: Represents the target for this sales line
+  // ----------------------------------------------------
 }
 
 /**
@@ -173,13 +180,10 @@ export interface NewApprovedSalesRecord {
 }
 
 // Type for SalesLine used in components (includes UI-specific fields and maps API fields)
+// Note: Officer_Name, Role_Name, Product_Code, Target are now inherited from VivoSalesLine.
 export type SalesLine = Omit<VivoSalesLine, 'Litres_Sold' | 'Line_No'> & {
   SN: number; // SN is used in components, maps to Line_No from API
   SKU_Liters: number; // SKU_Liters is used in components, maps to Litres_Sold from API
-  Officer_Name: string;
-  Role_Name: string;
-  Product_Code?: string;
-  Target: number;
   isUpdating: boolean;
 };
 

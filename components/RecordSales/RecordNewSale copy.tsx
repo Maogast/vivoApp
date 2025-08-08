@@ -1,3 +1,7 @@
+// components/RecordSales/RecordNewSale copy.tsx
+// This component allows users to create a new sales record.
+// It uses a dialog to collect necessary information and submits it to the server.
+'use client'
 import React from 'react'
 import VivoUserDetails from './VivoUserDetails';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';

@@ -1,3 +1,6 @@
+// components/RecordSales/IndividualTargets.tsx
+// This component allows users to view and manage individual sales targets.
+// It displays a list of targets with options to select products, enter quantities, and calculate totals.
 'use client'
 
 import React, { useState } from 'react'

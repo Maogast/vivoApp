@@ -1,4 +1,6 @@
 // components/RecordSales/CreateNewSaleForm.tsx
+// This component allows users to create a new sales record.
+// It uses a dialog to collect necessary information and submits it to the server.
 'use client'
 
 import { useEffect, useState } from 'react'

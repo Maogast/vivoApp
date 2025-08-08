@@ -1,129 +1,93 @@
+// components/RecordSales/RecordNewSale.tsx
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useTransition, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import * as Dialog from '@radix-ui/react-dialog'
 import { Button } from '../ui/button'
-import { Icon } from '@iconify/react/dist/iconify.js'
-import { createData } from '@/lib/api'
-import { API_BASE_URL } from '@/lib/constants'
+import { createSalesHeader } from './actions'
 import RecordSalesForm from './RecordSalesForm'
 
-type Toast = {
-  type: 'success' | 'error'
-  message: string
-}
+import type {
+  VivoSalesHeader,
+  VivoProduct,
+  ProductSKU,
+  VivoUserSessionDetails,
+} from '@/types'
+import { API_BASE_URL, API_AUTHORIZATION } from '@/lib/constants'
 
-interface SaleHeader {
-  Region_Name: string
-  Region_Code: string
-  Outlet_Name: string
-  Outlet_Code: string
-}
-
-export function RecordNewSale() {
+export default function RecordNewSale() {
+  const [isPending, startTransition] = useTransition()
+  const [actionState, formAction] = React.useActionState(createSalesHeader, null)
   const router = useRouter()
-  const [isCreating, setIsCreating] = useState(false)
-  const [saleNo, setSaleNo] = useState<string | null>(null)
-  const [header, setHeader] = useState<SaleHeader | null>(null)
-  const [open, setOpen] = useState(false)
-  const [user, setUser] = useState<any>(null)
-  const [toast, setToast] = useState<Toast | null>(null)
 
-  // Auto‐dismiss toast after 3s
+  // after creation this holds the full header with @odata.etag
+  const [createdHeader, setCreatedHeader] = useState<VivoSalesHeader | null>(null)
+
+  // lookup data
+  const [products, setProducts] = useState<VivoProduct[]>([])
+  const [SKU, setSKU] = useState<ProductSKU[]>([])
+  const [isLoadingLookups, setIsLoadingLookups] = useState(true)
+  const [toast, setToast] = useState<string | null>(null)
+
+  // load user data & lookups similarly to your original…
+
+  // watch your server action
   useEffect(() => {
-    if (!toast) return
-    const timer = setTimeout(() => setToast(null), 3000)
-    return () => clearTimeout(timer)
-  }, [toast])
-
-  // Load user details from localStorage
-  useEffect(() => {
-    const stored = localStorage.getItem('vivoUser')
-    if (stored) setUser(JSON.parse(stored))
-  }, [])
-
-  // Create new sale header
-  const handleCreate = async () => {
-    if (!user) {
-      setToast({ type: 'error', message: 'User not authenticated' })
-      return
+    if (actionState?.success && actionState.data) {
+      const header = actionState.data as VivoSalesHeader
+      setCreatedHeader(header)
+      router.refresh()
+      setToast(`Sale header created: ${header.No}`)
+    } else if (actionState?.error) {
+      setToast(`Error creating header: ${actionState.error}`)
     }
+  }, [actionState, router])
 
-    setIsCreating(true)
-    try {
-      const payload = {
-        Region_Code: user.Region_Code,
-        Outlet_Code: user.Outlet_Code,
-      }
-
-      const res = await createData(
-        `${API_BASE_URL}/NewSalesHeader`,
-        payload
-      )
-      if (!res.ok) throw new Error(`Status ${res.status}`)
-
-      const data = await res.json()
-      setSaleNo(data.No)
-      setHeader({
-        Region_Name: user.Region_Name,
-        Region_Code: user.Region_Code,
-        Outlet_Name: user.Outlet_Name,
-        Outlet_Code: user.Outlet_Code,
-      })
-      setOpen(true)
-      setToast({ type: 'success', message: `Sale created: ${data.No}` })
-    } catch (err: any) {
-      console.error('Failed to create sale header:', err)
-      setToast({
-        type: 'error',
-        message: err.message || 'Failed to create sale',
-      })
-    } finally {
-      setIsCreating(false)
-    }
+  // if no header yet, show your “create header” form
+  if (!createdHeader) {
+    return (
+      <form onSubmit={(e) => {
+        e.preventDefault()
+        if (isLoadingLookups) {
+          setToast('Please wait until products & SKUs load.')
+          return
+        }
+        startTransition(() => formAction(new FormData(e.currentTarget)))
+      }}>
+        {/* your inputs for region/outlet (hiddden or select)… */}
+        <Button type="submit" disabled={isPending}>
+          {isPending ? 'Creating…' : 'Create New Sale'}
+        </Button>
+      </form>
+    )
   }
 
-  // Close dialog and refresh list
-  const handleClose = () => {
-    setOpen(false)
-    setSaleNo(null)
-    router.refresh()
-  }
-
+  // once createdHeader exists, render the RecordSalesForm
   return (
     <>
-      {/* Toast / Confirmation Banner */}
-      {toast && (
-        <div
-          className={`mb-4 p-3 rounded border text-sm ${
-            toast.type === 'success'
-              ? 'bg-green-50 border-green-200 text-green-800'
-              : 'bg-red-50 border-red-200 text-red-800'
-          }`}
-        >
-          {toast.message}
-        </div>
-      )}
+      {toast && <div className="mb-4 p-3 bg-green-50">{toast}</div>}
 
-      <Button onClick={handleCreate} disabled={isCreating}>
-        {isCreating ? 'Creating…' : (
-          <>
-            <Icon
-              icon="solar:add-circle-linear"
-              className="text-xl text-white"
-            />
-            New Sale
-          </>
-        )}
-      </Button>
+      <RecordSalesForm
+        No={createdHeader.No}
 
-      {open && saleNo && header && (
-        <RecordSalesForm
-          No={saleNo}
-          header={header}
-          onClose={handleClose}
-        />
-      )}
+        // ← **THIS** must match the Pick<> in RecordSalesForm
+        header={{
+          '@odata.etag': createdHeader['@odata.etag'],
+          Region_Name:   createdHeader.Region_Name,
+          Region_Code:   createdHeader.Region_Code,
+          Outlet_Name:   createdHeader.Outlet_Name,
+          Outlet_Code:   createdHeader.Outlet_Code,
+        }}
+
+        onClose={() => {
+          // reset back to the create‐form or close your dialog
+          setCreatedHeader(null)
+        }}
+
+        products={products}
+        SKU={SKU}
+      />
     </>
   )
 }

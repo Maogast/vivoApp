@@ -1,4 +1,8 @@
-/*import { Button } from "@/components/ui/button"
+// components/RecordSales/CreateNewSale.tsx
+// This component allows users to create a new sales record.
+// It uses a dialog to collect necessary information and submits it to the server.
+'use client'
+import { Button } from "@/components/ui/button"
 import {
    Dialog,
    DialogClose,
@@ -135,4 +139,3 @@ export async function CreateNewSale() {
       </Dialog>
    )
 }
-*/

@@ -42,10 +42,11 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "autoprefixer": "^10.4.21",
     "eslint": "^9",
     "eslint-config-next": "15.4.4",
     "rimraf": "^5.0.0",
-    "tailwindcss": "^4",
+    "tailwindcss": "^4.1.11",
     "tw-animate-css": "^1.3.6",
     "typescript": "^5"
   }

@@ -1,3 +1,7 @@
+// app/dashboard/record-sales/page.tsx
+// This file is part of the Vivo Sales Dashboard application.
+// It fetches and displays open sales records for the logged-in user.
+
 import { RecordSalesList } from '@/components/RecordSales/RecordSalesList';
 import { fetchData } from '@/lib/api';
 import { API_BASE_URL } from '@/lib/constants';
