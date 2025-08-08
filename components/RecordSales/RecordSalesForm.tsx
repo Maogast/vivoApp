@@ -87,6 +87,11 @@ export default function RecordSalesForm({
   // Provide SKUs for the datalist
   const filteredSKUs = useMemo(() => SKU, [SKU])
 
+  // Determine if there's at least one line with Quantity > 0
+  const canApprove = useMemo(() => {
+    return lineItems.some(item => item.Quantity > 0)
+  }, [lineItems])
+
   // Auto-dismiss toast after 3 seconds
   useEffect(() => {
     if (!toast) return
@@ -276,8 +281,16 @@ export default function RecordSalesForm({
   // Prevent form submit on Enter
   const handleSubmit = (e: FormEvent) => e.preventDefault()
 
-  // Send for Approval
+  // Send for Approval (guarded by canApprove)
   const handleSendForApproval = async () => {
+    if (!canApprove) {
+      setToast({
+        type: 'error',
+        message: 'Add at least one line with Qty > 0 before sending.',
+      })
+      return
+    }
+
     setIsApproving(true)
     setToast(null)
     try {
@@ -292,15 +305,16 @@ export default function RecordSalesForm({
     }
   }
 
-  // Cancel the entire header on the backend
+ // Cancel the entire header on the backend
 const handleCancelHeader = async () => {
   if (isApproving || isCancelling) return
+
   setIsCancelling(true)
   setToast(null)
 
   try {
-    // ← use key‐as‐segment syntax here
-    const url = `${API_BASE_URL}/SalesHeaders('${No}')`
+    // <-- use SalesOrder, not SalesHeaders
+    const url = `${API_BASE_URL}/SalesOrder('${No}')`
     const res = await fetch(url, {
       method: 'DELETE',
       headers: {
@@ -314,15 +328,16 @@ const handleCancelHeader = async () => {
       throw new Error(txt || `HTTP ${res.status}`)
     }
 
-    setToast({ type: 'success', message: 'Sale cancelled' })
+    setToast({ type: 'success', message: 'Sale header cancelled' })
     setTimeout(onClose, 1500)
   } catch (err: any) {
-    console.error(err)
+    console.error('Cancel failed:', err)
     setToast({ type: 'error', message: `Cancel failed: ${err.message}` })
   } finally {
     setIsCancelling(false)
   }
 }
+
 
 
   return (
@@ -351,7 +366,7 @@ const handleCancelHeader = async () => {
           <DialogHeader>
             <DialogTitle>Sale No: {No}</DialogTitle>
             <DialogDescription>
-              Review or adjust line items, then approve or cancel.
+              Fill in the SKU, quantity and review totals before send for approve or cancel.
             </DialogDescription>
           </DialogHeader>
 
@@ -399,14 +414,14 @@ const handleCancelHeader = async () => {
               <Button
                 variant="outline"
                 onClick={handleCancelHeader}
-                disabled={isApproving || isCancelling}
-              >
-                {isCancelling ? 'Cancelling…' : 'Cancel'}
-              </Button>
+               disabled={isApproving || isCancelling}
+  >
+              {isCancelling ? 'Cancelling…' : 'Cancel'}
+            </Button>
               <Button
                 type="button"
                 onClick={handleSendForApproval}
-                disabled={isApproving || isCancelling}
+                disabled={!canApprove || isApproving || isCancelling}
               >
                 {isApproving ? 'Sending…' : 'Send for Approval'}
               </Button>
@@ -505,7 +520,9 @@ const handleCancelHeader = async () => {
                         <p className="text-right">{item.Total.toFixed(3)}</p>
                       </TableCell>
                       <TableCell>
-                        <p className="text-right">{item.SKU_Ratio.toFixed(3)}</p>
+                        <p className="text-right">
+                          {item.SKU_Ratio.toFixed(3)}
+                        </p>
                       </TableCell>
                       <TableCell>
                         <p className="text-right">
