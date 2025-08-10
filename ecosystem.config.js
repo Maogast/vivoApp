@@ -29,12 +29,13 @@ module.exports = {
       repo: 'git@github.com:Maogast/vivoApp.git',
       path: '/var/www/vivoApp',
 
-      // Build & prune on your local machine
-      'pre-deploy-local': 'npm ci && npm run build && npm prune --production',
+      // Local: install deps & build only
+      'pre-deploy-local': 'npm ci && npm run build',
 
-      // Remote commands run on the server
+      // Remote: cleanup, install production deps, migrate, clear cache, reload
       'post-deploy': [
         'cd /var/www/vivoApp',
+        'npm prune --production',
         'npm ci --omit=dev',
         'if [ -f scripts/migrate.js ]; then ' +
           'export NODE_OPTIONS="--max_old_space_size=512" && npm run migrate; ' +
