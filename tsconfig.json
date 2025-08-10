@@ -17,9 +17,10 @@
     "isolatedModules": true,
     "incremental": true,
 
+    // switch from "preserve" to the new React JSX transform
     "jsx": "react-jsx",
 
-    // ensure TS picks up React / React-DOM / Node types
+    // explicitly load React, React-DOM and Node types
     "types": ["node", "react", "react-dom"],
 
     "baseUrl": ".",
@@ -33,10 +34,13 @@
       "@/types/*": ["types/*"]
     },
 
+    // keep your custom type roots
     "typeRoots": ["./types", "./node_modules/@types"],
 
     "plugins": [
-      { "name": "next" }
+      {
+        "name": "next"
+      }
     ]
   },
 
