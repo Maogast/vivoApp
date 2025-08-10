@@ -24,13 +24,20 @@ module.exports = {
       ref: 'origin/ogaro',
       repo: 'git@github.com:Maogast/vivoApp.git',
       path: '/var/www/vivoApp',
+
+      // build locally before sending to the server
+      'pre-deploy-local': 'npm ci && npm run build',
+
+      // on the server: install production deps, run migrations & cache clear, then reload
       'post-deploy': [
+        'cd /var/www/vivoApp',
         'npm ci --omit=dev',
-        'npm run build',
         'npm run migrate',
         'npm run clear-cache',
         'pm2 reload ecosystem.config.js --env production'
-      ].join(' && ')
+      ].join(' && '),
+
+      ssh_options: 'StrictHostKeyChecking=no'
     }
   }
 };
