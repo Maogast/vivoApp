@@ -12,7 +12,8 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Icon } from '@iconify/react/dist/iconify.js'
+// ✅ preferred
+import { Icon } from '@iconify/react'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
