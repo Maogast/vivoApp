@@ -21,16 +21,13 @@ module.exports = {
     production: {
       user: 'root',
       host: '144.91.79.8',
-
-      // Point PM2 at your private key for passwordless SSH
       key: '~/.ssh/id_ed25519',
-
       ref: 'origin/ogaro',
       repo: 'git@github.com:Maogast/vivoApp.git',
       path: '/var/www/vivoApp',
 
-      // Local: install deps & build only
-      'pre-deploy-local': 'npm ci && npm run build',
+      // Local: skip optional deps, install & build only
+      'pre-deploy-local': 'npm ci --no-optional && npm run build',
 
       // Remote: cleanup, install production deps, migrate, clear cache, reload
       'post-deploy': [
@@ -44,7 +41,6 @@ module.exports = {
         'pm2 reload ecosystem.config.js --env production'
       ].join(' && '),
 
-      // avoid interactive host key prompts
       ssh_options: 'StrictHostKeyChecking=no'
     }
   }
