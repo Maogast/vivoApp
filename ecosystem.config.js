@@ -21,6 +21,10 @@ module.exports = {
     production: {
       user: 'root',
       host: '144.91.79.8',
+
+      // Point PM2 at your private key for passwordless SSH
+      key: '~/.ssh/id_ed25519',
+
       ref: 'origin/ogaro',
       repo: 'git@github.com:Maogast/vivoApp.git',
       path: '/var/www/vivoApp',
@@ -39,6 +43,7 @@ module.exports = {
         'pm2 reload ecosystem.config.js --env production'
       ].join(' && '),
 
+      // avoid interactive host key prompts
       ssh_options: 'StrictHostKeyChecking=no'
     }
   }
