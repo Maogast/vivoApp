@@ -25,13 +25,12 @@ module.exports = {
       repo: 'git@github.com:Maogast/vivoApp.git',
       path: '/var/www/vivoApp',
 
-      // build locally before sending to the server
-      'pre-deploy-local': 'npm ci && npm run build',
+      // 1) Build & prune on your machine
+      'pre-deploy-local': 'npm ci && npm run build && npm prune --production',
 
-      // on the server: install production deps, run migrations & cache clear, then reload
+      // 2) On the server: run migrations, clear cache, reload only
       'post-deploy': [
         'cd /var/www/vivoApp',
-        'npm ci --omit=dev',
         'npm run migrate',
         'npm run clear-cache',
         'pm2 reload ecosystem.config.js --env production'
