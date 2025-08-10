@@ -36,6 +36,7 @@ export async function RecordNewSale() {
                      </DialogDescription>
                   </DialogHeader>
                   <h1 className="text-2xl font-bold mb-4">Record New Sale</h1>
+      
                   <div className='flex items-center justify-end gap-4'>
                      <DialogClose asChild>
                         <Button variant="outline">Cancel</Button>
