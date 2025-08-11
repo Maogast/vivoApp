@@ -26,16 +26,16 @@ module.exports = {
       repo: 'git@github.com:Maogast/vivoApp.git',
       path: '/var/www/vivoApp',
 
-      // Local build on WSL ext4
+      // Local: build on WSL ext4
       'pre-deploy-local': 'npm ci && npm run build',
 
-      // Remote: clean logs, prune dev deps, install prod-only without scripts, clear cache, reload
+      // Remote: clean logs, prune, install prod only, clear Next cache, reload
       'post-deploy': [
         'cd /var/www/vivoApp',
         'rm -rf ~/.npm/_logs',
         'npm prune --production',
         'npm ci --omit=dev --ignore-scripts',
-        'npm run clear-cache',
+        'rm -rf .next/cache',         // <— ditch rimraf, just use rm
         'pm2 reload ecosystem.config.js --env production'
       ].join(' && '),
 
