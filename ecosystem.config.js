@@ -26,17 +26,16 @@ module.exports = {
       repo: 'git@github.com:Maogast/vivoApp.git',
       path: '/var/www/vivoApp',
 
-      // Local: clean‐install & build on WSL ext4
+      // Local build on WSL ext4
       'pre-deploy-local': 'npm ci && npm run build',
 
-      // Remote: prune dev deps, install prod deps, run migrations, clear cache, reload
+      // Remote post-deploy: prune, install, migrate if needed, clear cache, reload
       'post-deploy': [
         'cd /var/www/vivoApp',
         'npm prune --production',
         'npm ci --omit=dev',
-        'if [ -f scripts/migrate.js ]; then ' +
-          'export NODE_OPTIONS="--max_old_space_size=512" && npm run migrate; ' +
-          'else echo "No migrate.js — skipping"; fi',
+        // full if...then...else...fi block in one string
+        'if [ -f scripts/migrate.js ]; then export NODE_OPTIONS="--max_old_space_size=512" && npm run migrate; else echo "No migrate.js — skipping"; fi',
         'npm run clear-cache',
         'pm2 reload ecosystem.config.js --env production'
       ].join(' && '),
