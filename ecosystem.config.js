@@ -26,13 +26,10 @@ module.exports = {
       repo: 'git@github.com:Maogast/vivoApp.git',
       path: '/var/www/vivoApp',
 
-      // Local: install only required deps, rebuild LightningCSS binary, then build
-      'pre-deploy-local':
-        'npm ci --omit=optional' +
-        ' && npm rebuild lightningcss --update-binary' +
-        ' && npm run build',
+      // Local: clean‐install & build on WSL ext4
+      'pre-deploy-local': 'npm ci && npm run build',
 
-      // Remote: cleanup, install production deps, migrate, clear cache, reload
+      // Remote: prune dev deps, install prod deps, run migrations, clear cache, reload
       'post-deploy': [
         'cd /var/www/vivoApp',
         'npm prune --production',

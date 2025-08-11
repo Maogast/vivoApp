@@ -1,49 +1,62 @@
 {
   "compilerOptions": {
     "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
-
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
     "noEmit": true,
-
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-
     "module": "esnext",
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "incremental": true,
-
     // switch from "preserve" to the new React JSX transform
-    "jsx": "react-jsx",
-
+    "jsx": "preserve",
     // explicitly load React, React-DOM and Node types
-    "types": ["node", "react", "react-dom"],
-
+    "types": [
+      "node",
+      "react",
+      "react-dom"
+    ],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"],
-      "@/components/*": ["components/*"],
-      "@/lib/*": ["lib/*"],
-      "@/utils/*": ["utils/*"],
-
-      "@/types": ["types/index.ts"],
-      "@/types/*": ["types/*"]
+      "@/*": [
+        "./*"
+      ],
+      "@/components/*": [
+        "components/*"
+      ],
+      "@/lib/*": [
+        "lib/*"
+      ],
+      "@/utils/*": [
+        "utils/*"
+      ],
+      "@/types": [
+        "types/index.ts"
+      ],
+      "@/types/*": [
+        "types/*"
+      ]
     },
-
     // keep your custom type roots
-    "typeRoots": ["./types", "./node_modules/@types"],
-
+    "typeRoots": [
+      "./types",
+      "./node_modules/@types"
+    ],
     "plugins": [
       {
         "name": "next"
       }
     ]
   },
-
   "include": [
     "next-env.d.ts",
     "**/*.ts",
@@ -51,6 +64,7 @@
     ".next/types/**/*.ts",
     "types/**/*.ts"
   ],
-
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules"
+  ]
 }
