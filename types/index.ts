@@ -181,11 +181,12 @@ export interface NewApprovedSalesRecord {
 
 // Type for SalesLine used in components (includes UI-specific fields and maps API fields)
 // Note: Officer_Name, Role_Name, Product_Code, Target are now inherited from VivoSalesLine.
+// IMPORTANT CHANGE: SN is now 'number | string' to allow for temporary client-side IDs.
 export type SalesLine = Omit<VivoSalesLine, 'Litres_Sold' | 'Line_No'> & {
-  SN: number; // SN is used in components, maps to Line_No from API
+  SN: number | string; // <--- This line was changed to allow string for temporary IDs
   SKU_Liters: number; // SKU_Liters is used in components, maps to Litres_Sold from API
   isUpdating: boolean;
 };
 
 // Type for ApprovalResult used in components
-export type ApprovalResult = { SN: number; Code: string };
+export type ApprovalResult = { SN: number | string; Code: string }; // Changed SN to number | string here too

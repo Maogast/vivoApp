@@ -11,7 +11,6 @@ import {
   VivoSalesLine as RawVivoSalesLine, // Import original VivoSalesLine as RawVivoSalesLine
 } from '@/types'; // Import all types from the central types file
 
-
 /**
  * Generic GET helper with no-store caching and automatic Basic auth.
  */
@@ -159,7 +158,7 @@ export async function fetchLubricantSKUs(): Promise<ProductSKU[]> {
  */
 export async function fetchSalesLines(saleNo: string): Promise<SalesLine[]> {
   const url = endpoints.recordSales.newSalesLines(saleNo);
-  const res = await fetchData<{ value: RawVivoSalesLine[] }>(url); // Expect RawVivoSalesLine[] from API
+  const res = await fetchData<{ value: RawVivoSalesLine[] }>(url);
   return res.value.map(row => ({
     No: row.No,
     SN: row.Line_No, // Map Line_No to SN
@@ -195,27 +194,17 @@ export async function addSalesLine(
   productCode: string
 ): Promise<SalesLine> {
   const url = endpoints.recordSales.newSalesLines();
-  // Construct payload for API based on RawVivoSalesLine structure
+  // Construct payload for API with ONLY the strictly required fields for creation.
+  // The "Does not support untyped value in non-open type" error often means
+  // sending empty strings or zeros for fields not expected on initial POST.
   const payload: Partial<RawVivoSalesLine> = {
     No: saleNo,
-    Officer_Code: officerCode, // Include Officer_Code
-    Product_Code: productCode, // Include Product_Code
-    // Provide default values for other required fields if the API expects them on creation
-    // These might be empty strings or 0 depending on your backend's requirements for a new line.
-    Line_No: 0, // Placeholder, usually assigned by backend
-    SKU_Code: '',
-    SKU_Name: '',
-    Litres_Sold: 0,
-    Commission_Earned: 0,
-    Grade: '',
-    Quantity: 0,
-    Total: 0,
-    SKU_Ratio: 0,
-    Officer_Name: '', // Placeholder
-    Role_Name: '', // Placeholder
-    Target: 0, // Placeholder
+    Officer_Code: officerCode,
+    Product_Code: productCode,
+    // Omit other fields, letting the backend assign default values.
+    // They will be updated via PATCH requests later if modified by the user.
   };
-  const newLine = await createData<typeof payload, RawVivoSalesLine>(url, payload); // Expect RawVivoSalesLine from API
+  const newLine = await createData<typeof payload, RawVivoSalesLine>(url, payload);
   return {
     No: newLine.No,
     SN: newLine.Line_No,
@@ -229,11 +218,11 @@ export async function addSalesLine(
     Total: newLine.Total || 0,
     SKU_Ratio: newLine.SKU_Ratio || 0,
     // Map the newly provided fields back
-    Officer_Code: newLine.Officer_Code || '', // Ensure mapped
-    Officer_Name: newLine.Officer_Name || '', // Ensure mapped
-    Role_Name: newLine.Role_Name || '', // Ensure mapped
-    Product_Code: newLine.Product_Code || '', // Ensure mapped
-    Target: newLine.Target || 0, // Ensure mapped
+    Officer_Code: newLine.Officer_Code || '',
+    Officer_Name: newLine.Officer_Name || '',
+    Role_Name: newLine.Role_Name || '',
+    Product_Code: newLine.Product_Code || '',
+    Target: newLine.Target || 0,
     isUpdating: false
   };
 }
@@ -255,8 +244,6 @@ export async function updateSalesLine(
   const url = endpoints.recordSales.salesLineItem(saleNo, sn);
   // Map payload from SalesLine (component type) to RawVivoSalesLine (API type)
   const apiPayload: Partial<RawVivoSalesLine> = {
-    // No: payload.No, // No is part of the URL, not typically in PATCH body
-    // Line_No: payload.SN, // Line_No is part of the URL, not typically in PATCH body
     SKU_Code: payload.SKU_Code,
     Litres_Sold: payload.SKU_Liters, // Map SKU_Liters back to Litres_Sold for API
     Grade: payload.Grade,
@@ -268,13 +255,15 @@ export async function updateSalesLine(
     // Include Officer_Code and Product_Code if they are patchable
     Officer_Code: payload.Officer_Code,
     Product_Code: payload.Product_Code,
-    Officer_Name: payload.Officer_Name, // Include if patchable
-    Role_Name: payload.Role_Name, // Include if patchable
-    Target: payload.Target, // Include if patchable
+    Officer_Name: payload.Officer_Name,
+    Role_Name: payload.Role_Name,
+    Target: payload.Target,
   };
-  const updatedLine = await updateData<Partial<RawVivoSalesLine>, RawVivoSalesLine>(url, apiPayload, {
-    headers: { 'If-Match': etag },
-  });
+  const updatedLine = await updateData<Partial<RawVivoSalesLine>, RawVivoSalesLine>(
+    url,
+    apiPayload,
+    { headers: { 'If-Match': etag } }
+  );
   return {
     No: updatedLine.No,
     SN: updatedLine.Line_No,
@@ -287,12 +276,11 @@ export async function updateSalesLine(
     Quantity: updatedLine.Quantity || 0,
     Total: updatedLine.Total || 0,
     SKU_Ratio: updatedLine.SKU_Ratio || 0,
-    // Provide default or derived values for properties not in RawVivoSalesLine
-    Officer_Code: updatedLine.Officer_Code || '', // Ensure mapped from API response
-    Officer_Name: updatedLine.Officer_Name || '', // Ensure mapped from API response
-    Role_Name: updatedLine.Role_Name || '', // Ensure mapped from API response
-    Product_Code: updatedLine.Product_Code || '', // Ensure mapped from API response
-    Target: updatedLine.Target || 0, // Ensure mapped from API response
+    Officer_Code: updatedLine.Officer_Code || '',
+    Officer_Name: updatedLine.Officer_Name || '',
+    Role_Name: updatedLine.Role_Name || '',
+    Product_Code: updatedLine.Product_Code || '',
+    Target: updatedLine.Target || 0,
     isUpdating: false
   };
 }
@@ -309,6 +297,21 @@ export async function deleteSalesLine(
   etag: string
 ): Promise<void> {
   const url = endpoints.recordSales.salesLineItem(saleNo, sn);
+  await deleteData(url, {
+    headers: { 'If-Match': etag },
+  });
+}
+
+/**
+ * Deletes an entire sales header.
+ * @param saleNo The sale number.
+ * @param etag The OData ETag for optimistic concurrency control.
+ */
+export async function deleteSalesHeader(
+  saleNo: string,
+  etag: string
+): Promise<void> {
+  const url = endpoints.recordSales.headerItem(saleNo);
   await deleteData(url, {
     headers: { 'If-Match': etag },
   });

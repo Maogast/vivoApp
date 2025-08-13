@@ -1,3 +1,6 @@
+// app/dashboard/layout.tsx
+// This file is part of the Vivo Sales Dashboard application.
+// It defines the layout for the dashboard, including the sidebar and navbar.
 import { SidebarProvider } from "@/components/ui/sidebar"
 
 import Navbar from "@/components/navbar"

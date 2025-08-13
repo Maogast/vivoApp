@@ -1,3 +1,6 @@
+// components/PendingSales/PendingSalesList.tsx
+// This file is part of the Vivo Sales Dashboard application.
+// It defines the PendingSalesList component which displays a list of pending sales records.
 'use client'
 
 import React, { useMemo, useState } from 'react'
@@ -94,7 +97,8 @@ export default function PendingSalesList({ data }: PendingSalesListProps) {
       </div>
 
       {/* Filter Section Card */}
-      <Card className="mb-6 p-4 bg-white shadow-sm rounded-lg">
+      {/* Changed bg-white to bg-transparent for the filter card */}
+      <Card className="mb-6 p-4 bg-transparent shadow-sm rounded-lg">
         <h3 className="text-lg font-semibold mb-3 text-gray-700">Filter Sales</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Date Captured Filter */}
@@ -136,7 +140,8 @@ export default function PendingSalesList({ data }: PendingSalesListProps) {
       </Card>
 
       {/* Sales Table Card */}
-      <Card className="mt-4 bg-white shadow-sm rounded-lg h-[80vh] overflow-auto">
+      {/* Changed bg-white to bg-transparent for the table card */}
+      <Card className="mt-4 bg-transparent shadow-sm rounded-lg h-[80vh] overflow-auto">
         <Table>
           <TableCaption className="text-gray-500 py-2">
             Sales records for {data[0]?.Outlet_Name || '—'} (Filtered)

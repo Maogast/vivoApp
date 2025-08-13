@@ -1,3 +1,6 @@
+// components/RejectedSales.tsx/RejectedRecordsSalesView.tsx
+// This file is part of the Vivo Sales Dashboard application.
+// It defines the view for rejected sales records, displaying details and line items.
 'use client'
 
 import React, { useState, useEffect } from 'react'

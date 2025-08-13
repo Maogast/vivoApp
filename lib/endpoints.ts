@@ -52,6 +52,12 @@ export const endpoints = {
     },
 
     /**
+     * Single‐sale header resource (for DELETE/PATCH).
+     */
+    headerItem: (saleNo: string) =>
+      `${API_BASE_URL}/NewSalesHeader('${encodeURIComponent(saleNo)}')`,
+
+    /**
      * Inline line items for a sale (NewSalesLines)
      * This endpoint now also supports POST to add a new line.
      */
@@ -62,9 +68,9 @@ export const endpoints = {
       }
       return url
     },
-    
+
     // NEW: Endpoint to address a specific sales line item for PATCH and DELETE operations.
-    salesLineItem: (saleNo: string, sn: number) => 
+    salesLineItem: (saleNo: string, sn: number) =>
       `${API_BASE_URL}/NewSalesLines(No='${encodeURIComponent(saleNo)}',SN=${sn})`,
   },
   

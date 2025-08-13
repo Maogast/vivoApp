@@ -1,4 +1,6 @@
-
+// components/ui/sidebar/sidebar-items.ts
+// This file defines the sidebar items for the Vivo Sales Dashboard application.
+// It includes various sections like Sales, Reports, Users, and Set-Up with their respective links.
 import React from "react";
 import { Icon } from "@iconify/react";
 
@@ -23,7 +25,7 @@ const sidebarItems = [
         url: "/dashboard/approved-sales",
       },
       {
-        title: "Rejected",
+        title: "Rejected ",
         url: "/dashboard/rejected-sales",
       },
     ],
@@ -38,7 +40,7 @@ const sidebarItems = [
     children: [
       {
         title: "Performance",
-        url: "/performance-reports",
+        url: "/dashboard/reports/performance",
       },
     ],
   },

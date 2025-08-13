@@ -1,6 +1,7 @@
 // components/RecordSales/RecordSalesForm.tsx
 // This component displays and manages the sales records form.
 // It supports adding, updating, deleting lines, sending for approval, and canceling the header.
+
 'use client'
 
 import React, { useEffect, useState, FormEvent, useMemo } from 'react'
@@ -12,7 +13,6 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-// ✅ preferred
 import { Icon } from '@iconify/react'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
@@ -27,7 +27,9 @@ import {
   TableCell,
 } from '@/components/ui/table'
 import { API_AUTHORIZATION, API_BASE_URL } from '@/lib/constants'
-import { submitForApproval } from '@/lib/api'
+
+import { submitForApproval, deleteSalesHeader } from '@/lib/api'
+import { useRouter } from 'next/navigation'
 
 import type {
   VivoSalesHeader,
@@ -38,7 +40,7 @@ import type {
 interface SalesLine {
   Officer_Code: any
   No: string
-  SN: number
+  SN: number // Sticking to user's provided type for SN
   Officer_Name: string
   Role_Name: string
   Product_Code?: string
@@ -61,13 +63,10 @@ type Toast = {
 
 interface RecordSalesFormProps {
   No: string
-
-  // Re-use shared header type with exactly the fields this form needs
   header: Pick<
     VivoSalesHeader,
     '@odata.etag' | 'Region_Name' | 'Region_Code' | 'Outlet_Name' | 'Outlet_Code'
   >
-
   onClose: () => void
   products: VivoProduct[]
   SKU: ProductSKU[]
@@ -80,18 +79,22 @@ export default function RecordSalesForm({
   products,
   SKU,
 }: RecordSalesFormProps) {
+  const router = useRouter()
   const [lineItems, setLineItems] = useState<SalesLine[]>([])
   const [toast, setToast] = useState<Toast | null>(null)
   const [isApproving, setIsApproving] = useState(false)
   const [isCancelling, setIsCancelling] = useState(false)
+  // ONLY ADDITION: New state to control the custom confirmation modal visibility
+  const [showConfirmCancel, setShowConfirmCancel] = useState(false);
 
   // Provide SKUs for the datalist
   const filteredSKUs = useMemo(() => SKU, [SKU])
 
   // Determine if there's at least one line with Quantity > 0
-  const canApprove = useMemo(() => {
-    return lineItems.some(item => item.Quantity > 0)
-  }, [lineItems])
+  const canApprove = useMemo(
+    () => lineItems.some(item => item.Quantity > 0),
+    [lineItems]
+  )
 
   // Auto-dismiss toast after 3 seconds
   useEffect(() => {
@@ -106,8 +109,8 @@ export default function RecordSalesForm({
     fetch(`${API_BASE_URL}/NewSalesLines?$filter=No eq '${No}'`, {
       headers: { Authorization: API_AUTHORIZATION },
     })
-      .then((r) => r.json())
-      .then((d) =>
+      .then(r => r.json())
+      .then(d =>
         setLineItems(
           (d.value || []).map((row: any) => ({ ...row, isUpdating: false }))
         )
@@ -115,7 +118,7 @@ export default function RecordSalesForm({
       .catch(console.error)
   }, [No])
 
-  // Low-level helper to PATCH a line
+  // Low‐level helper to PATCH a line
   async function patchLine(
     no: string,
     sn: number,
@@ -139,16 +142,17 @@ export default function RecordSalesForm({
     return res.json()
   }
 
-  // Generic per-row updater
+  // Generic per‐row updater
   async function handlePatch(
     idx: number,
     payload: Partial<SalesLine>,
     field: string
   ) {
-    setLineItems((rows) =>
+    setLineItems(rows =>
       rows.map((r, i) => (i === idx ? { ...r, isUpdating: true } : r))
     )
     const row = lineItems[idx]
+
     try {
       const updated = await patchLine(
         row.No,
@@ -156,7 +160,7 @@ export default function RecordSalesForm({
         payload,
         row['@odata.etag']
       )
-      setLineItems((rows) =>
+      setLineItems(rows =>
         rows.map((r, i) =>
           i === idx
             ? {
@@ -171,7 +175,7 @@ export default function RecordSalesForm({
       setToast({ type: 'success', message: `${field} updated` })
     } catch (err: any) {
       console.error(err)
-      setLineItems((rows) =>
+      setLineItems(rows =>
         rows.map((r, i) => (i === idx ? { ...r, isUpdating: false } : r))
       )
       setToast({ type: 'error', message: `Failed to update ${field}` })
@@ -190,7 +194,7 @@ export default function RecordSalesForm({
       handlePatch(idx, { SKU_Code: undefined }, 'SKU')
       return
     }
-    const match = SKU.find((s) => s.SKU_Code === inputCode)
+    const match = SKU.find(s => s.SKU_Code === inputCode)
     if (match) {
       handlePatch(idx, { SKU_Code: match.SKU_Code }, 'SKU')
     } else {
@@ -207,10 +211,12 @@ export default function RecordSalesForm({
   async function handleDeleteLine(idx: number) {
     const item = lineItems[idx]
     if (!item) return
-    setLineItems((rows) =>
+
+    setLineItems(rows =>
       rows.map((r, i) => (i === idx ? { ...r, isUpdating: true } : r))
     )
     const url = `${API_BASE_URL}/NewSalesLines(No='${item.No}',SN=${item.SN})`
+
     try {
       const res = await fetch(url, {
         method: 'DELETE',
@@ -224,11 +230,11 @@ export default function RecordSalesForm({
         const txt = await res.text()
         throw new Error(`HTTP ${res.status}: ${txt}`)
       }
-      setLineItems((rows) => rows.filter((_, i) => i !== idx))
+      setLineItems(rows => rows.filter((_, i) => i !== idx))
       setToast({ type: 'success', message: 'Line deleted.' })
     } catch (err: any) {
       console.error(err)
-      setLineItems((rows) =>
+      setLineItems(rows =>
         rows.map((r, i) => (i === idx ? { ...r, isUpdating: false } : r))
       )
       setToast({ type: 'error', message: `Delete failed: ${err.message}` })
@@ -239,7 +245,8 @@ export default function RecordSalesForm({
   async function handleAddEmptyLineAfter(idx: number) {
     const row = lineItems[idx]
     if (!row) return
-    setLineItems((rows) =>
+
+    setLineItems(rows =>
       rows.map((r, i) => (i === idx ? { ...r, isUpdating: true } : r))
     )
     const payload = {
@@ -248,6 +255,7 @@ export default function RecordSalesForm({
       Product_Code: row.Product_Code,
     }
     const url = `${API_BASE_URL}/NewSalesLines`
+
     try {
       const res = await fetch(url, {
         method: 'POST',
@@ -262,7 +270,7 @@ export default function RecordSalesForm({
         throw new Error(`HTTP ${res.status}: ${txt}`)
       }
       const newLine = await res.json()
-      setLineItems((rows) => {
+      setLineItems(rows => {
         const updated = [...rows]
         updated.splice(idx + 1, 0, { ...newLine, isUpdating: false })
         return updated.map((r, i) =>
@@ -272,7 +280,7 @@ export default function RecordSalesForm({
       setToast({ type: 'success', message: 'New line added.' })
     } catch (err: any) {
       console.error(err)
-      setLineItems((rows) =>
+      setLineItems(rows =>
         rows.map((r, i) => (i === idx ? { ...r, isUpdating: false } : r))
       )
       setToast({ type: 'error', message: `Add failed: ${err.message}` })
@@ -306,43 +314,37 @@ export default function RecordSalesForm({
     }
   }
 
- // Cancel the entire header on the backend
-const handleCancelHeader = async () => {
-  if (isApproving || isCancelling) return
+  // ONLY ADDITION: Handler to open the confirmation modal
+  const handleInitiateCancel = () => {
+    if (isApproving || isCancelling) return;
+    setShowConfirmCancel(true); // Open the custom confirmation modal
+  };
 
-  setIsCancelling(true)
-  setToast(null)
+  // ONLY ADDITION: Handler for confirming deletion from the modal
+  async function handleConfirmDeleteHeader() {
+    setShowConfirmCancel(false); // Close the confirmation modal
+    setIsCancelling(true);
+    setToast(null);
 
-  try {
-    // <-- use SalesOrder, not SalesHeaders
-    const url = `${API_BASE_URL}/SalesOrder('${No}')`
-    const res = await fetch(url, {
-      method: 'DELETE',
-      headers: {
-        Authorization: API_AUTHORIZATION,
-        'If-Match': header['@odata.etag'],
-      },
-    })
+    try {
+      await deleteSalesHeader(No, header['@odata.etag']); 
+      setToast({ type: 'success', message: 'Sale header cancelled' });
 
-    if (!res.ok) {
-      const txt = await res.text()
-      throw new Error(txt || `HTTP ${res.status}`)
+      setTimeout(() => {
+        onClose();
+        router.refresh(); 
+      }, 1200);
+    } catch (err: any) {
+      console.error('Cancel failed:', err);
+      setToast({ type: 'error', message: err.message || 'Cancel failed' });
+    } finally {
+      setIsCancelling(false);
     }
-
-    setToast({ type: 'success', message: 'Sale header cancelled' })
-    setTimeout(onClose, 1500)
-  } catch (err: any) {
-    console.error('Cancel failed:', err)
-    setToast({ type: 'error', message: `Cancel failed: ${err.message}` })
-  } finally {
-    setIsCancelling(false)
   }
-}
-
-
 
   return (
-    <Dialog open={!!No} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={!!No} onOpenChange={open => !open && onClose()}>
+      {/* Toast / Banner */}
       {toast && (
         <div
           className={`
@@ -361,6 +363,26 @@ const handleCancelHeader = async () => {
           <span className="font-semibold">{toast.message}</span>
         </div>
       )}
+
+      {/* ONLY ADDITION: Custom Confirmation Modal for Cancel */}
+      <Dialog open={showConfirmCancel} onOpenChange={setShowConfirmCancel}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Confirm Cancellation</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to cancel and delete sales record {No}? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="secondary" onClick={() => setShowConfirmCancel(false)} disabled={isCancelling}>
+              No, Keep Sale
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmDeleteHeader} disabled={isCancelling}>
+              {isCancelling ? 'Deleting...' : 'Yes, Delete Sale'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <form onSubmit={handleSubmit} className="flex flex-col h-full">
         <DialogContent className="sm:max-w-8xl max-h-[98vh] flex flex-col overflow-hidden">
@@ -414,11 +436,12 @@ const handleCancelHeader = async () => {
             <div className="flex space-x-2">
               <Button
                 variant="outline"
-                onClick={handleCancelHeader}
-               disabled={isApproving || isCancelling}
-  >
-              {isCancelling ? 'Cancelling…' : 'Cancel'}
-            </Button>
+                // ONLY CHANGE: Calls the new confirmation modal handler
+                onClick={handleInitiateCancel} 
+                disabled={isApproving || isCancelling}
+              >
+                {isCancelling ? 'Cancelling…' : 'Cancel'}
+              </Button>
               <Button
                 type="button"
                 onClick={handleSendForApproval}
@@ -464,12 +487,12 @@ const handleCancelHeader = async () => {
                           className="w-full border rounded px-2 py-1"
                           disabled={item.isUpdating}
                           value={item.Product_Code ?? ''}
-                          onChange={(e) =>
+                          onChange={e =>
                             handleProductChange(idx, e.target.value)
                           }
                         >
                           <option value="">Select Product</option>
-                          {products.map((p) => (
+                          {products.map(p => (
                             <option key={p.Code} value={p.Code}>
                               {p.Description}
                             </option>
@@ -485,13 +508,11 @@ const handleCancelHeader = async () => {
                           className="w-full border rounded px-2 py-1"
                           disabled={item.isUpdating}
                           value={item.SKU_Code ?? ''}
-                          onChange={(e) =>
-                            handleSKUChange(idx, e.target.value)
-                          }
+                          onChange={e => handleSKUChange(idx, e.target.value)}
                           placeholder="Search SKU"
                         />
                         <datalist id={`sku-options-${idx}`}>
-                          {filteredSKUs.map((s) => (
+                          {filteredSKUs.map(s => (
                             <option key={s.SKU_Code} value={s.SKU_Code}>
                               {s.SKU_Name}
                             </option>
@@ -499,9 +520,7 @@ const handleCancelHeader = async () => {
                         </datalist>
                       </TableCell>
                       <TableCell>
-                        <p className="text-right">
-                          {item.SKU_Liters.toFixed(3)}
-                        </p>
+                        <p className="text-right">{item.SKU_Liters.toFixed(3)}</p>
                       </TableCell>
                       <TableCell>
                         <p className="text-right">{item.Grade}</p>
@@ -512,7 +531,7 @@ const handleCancelHeader = async () => {
                           className="w-[80px] text-right"
                           disabled={item.isUpdating}
                           value={item.Quantity}
-                          onChange={(e) =>
+                          onChange={e =>
                             handleQuantityChange(idx, Number(e.target.value))
                           }
                         />
