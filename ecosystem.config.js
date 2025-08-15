@@ -26,7 +26,7 @@ module.exports = {
 
   deploy: {
     production: {
-      user: "stephendeveloper",
+      user: "root",
       host: "144.91.79.8",
       ref: "origin/ogaro",
       repo: "git@github.com:Maogast/vivoApp.git",
