@@ -48,6 +48,7 @@ module.exports = {
       "post-deploy": [
         "cd /var/www/vivo-main-frontend/current",
         "npm ci --omit=dev",
+        "npm install typescript --no-save",
         "npm run build",
         "pm2 reload ecosystem.config.js --env production"
       ].join(" && ")
