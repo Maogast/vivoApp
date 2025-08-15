@@ -21,7 +21,7 @@ import {
   submitForApproval,
   fetchSalesLines,
   updateSalesLine,
-  deleteSalesLine, // Renamed to apiDeleteSalesLine in RecordSalesForm to avoid conflict
+  deleteSalesLine,
   addSalesLine,
 } from '@/lib/api';
 // Importing types directly from '@/types'
@@ -51,6 +51,9 @@ interface RecordSalesEditViewProps {
   SKU: ProductSKU[]; // Now receives SKU as a prop
   isEditable?: boolean; // New prop to control editability of line items
 }
+
+// Helper to generate a client-side unique ID
+const generateTempId = () => `temp-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
 
 export default function RecordSalesEditView({
   No,
@@ -305,7 +308,7 @@ export default function RecordSalesEditView({
         updatedRows[idx] = { ...updatedRows[idx], isUpdating: true };
         updatedRows.splice(idx + 1, 0, {
             No: currentRow.No,
-            SN: `temp-creating-${crypto.randomUUID()}`, // Temporary ID for UI rendering
+            SN: generateTempId(), // Use the compatible temp ID generator
             Officer_Code: currentRow.Officer_Code,
             Product_Code: currentRow.Product_Code || '',
             Officer_Name: currentRow.Officer_Name,
@@ -320,7 +323,7 @@ export default function RecordSalesEditView({
             Commission_Earned: 0,
             '@odata.etag': '',
             isUpdating: true, // This new line is also 'updating' while being created
-            SKU_Name: '', // Fix: Initialize SKU_Name as it's required by SalesLine
+            SKU_Name: '', 
         });
         return updatedRows;
     });
@@ -338,7 +341,7 @@ export default function RecordSalesEditView({
                 // Map the API response to the SalesLine type, ensuring correct SN and numeric defaults
                 return {
                     ...newLine,
-                    SN: newLine.SN || `temp-${crypto.randomUUID()}`, // Use API SN or fallback to new temp
+                    SN: newLine.SN || generateTempId(), // Use API SN or fallback to new temp
                     SKU_Liters: newLine.SKU_Liters ?? 0,
                     Quantity: newLine.Quantity ?? 0,
                     Total: newLine.Total ?? 0,
@@ -357,10 +360,10 @@ export default function RecordSalesEditView({
 
         // Ensure no duplicates by checking if the new line is already there
         const isNewLineAlreadyPresent = finalRows.some(item => item.No === newLine.No && item.SN === newLine.SN);
-        if (!isNewLineAlreadyPresent && newLine.SN !== `temp-${crypto.randomUUID()}`) { // Prevent adding if it's already properly handled or still a generic temp
+        if (!isNewLineAlreadyPresent && newLine.SN !== generateTempId()) { // Prevent adding if it's already properly handled or still a generic temp
             finalRows.push({
                 ...newLine,
-                SN: newLine.SN || `temp-${crypto.randomUUID()}`,
+                SN: newLine.SN || generateTempId(),
                 SKU_Liters: newLine.SKU_Liters ?? 0,
                 Quantity: newLine.Quantity ?? 0,
                 Total: newLine.Total ?? 0,
@@ -402,7 +405,7 @@ export default function RecordSalesEditView({
           // If SN from API is 0 or undefined, assign a unique temporary string.
           // Otherwise, use the API's SN (which should be a number).
           SN: (item.SN === undefined || item.SN === null || item.SN === 0)
-            ? `temp-${crypto.randomUUID()}` // Assign a unique temporary string ID
+            ? generateTempId() // Use the compatible temp ID generator
             : Number(item.SN), // Ensure it's a number if it came from API
           SKU_Liters: item.SKU_Liters ?? 0, // Ensure numeric defaults
           Quantity: item.Quantity ?? 0,
