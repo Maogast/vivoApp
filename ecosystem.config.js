@@ -1,8 +1,9 @@
+// ecosystem.config.js
 module.exports = {
   apps: [
     {
       name: "vivo-frontend",
-      cwd: "/var/www/vivo-main-frontend/current",  // ← run inside the current release
+      cwd: "/var/www/vivo-main-frontend/current",
       script: "npm",
       args: "run start",
       instances: "max",
@@ -11,14 +12,14 @@ module.exports = {
       watch: false,
       max_memory_restart: "1G",
 
-      // default env (always applied)
       env: {
         PORT: 3000
       },
 
-      // only when you do `--env production`
       env_production: {
         NODE_ENV: "production",
+        // These are only used at runtime (next start),
+        // build‐time vars come from .env.production
         NEXT_PUBLIC_API_BASE_URL:
           "http://109.123.250.165:8048/VIVOAPI/ODataV4/Company('VIVO')",
         NEXT_PUBLIC_API_USERNAME: "VAPI",
@@ -38,13 +39,12 @@ module.exports = {
       key: "~/.ssh/id_ed25519",
       ssh_options: "StrictHostKeyChecking=no",
 
-      // only for `pm2 deploy production setup` (you can leave blank)
-      "pre-deploy-local": "",
+      // 1) Before any SSH or git‐clone happens, scp your local .env.local
+      //    into the new release folder as .env.production
+      "pre-deploy-local":
+        "scp -i ~/.ssh/id_ed25519 .env.local root@144.91.79.8:/var/www/vivo-main-frontend/current/.env.production",
 
-      // On each `pm2 deploy`, PM2 will:
-      //  • checkout into releases/<timestamp>
-      //  • symlink releases/<timestamp> → current
-      //  • then run this post-deploy inside the **current** folder
+      // 2) On the remote, build and reload
       "post-deploy": [
         "cd /var/www/vivo-main-frontend/current",
         "npm ci --omit=dev",
