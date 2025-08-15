@@ -215,7 +215,6 @@ export function RecordSalesList({ data }: Props) {
               <TableHead>Sales Date</TableHead>
               <TableHead>Date Captured</TableHead>
               <TableHead>Time Captured</TableHead>
-              <TableHead>Captured By</TableHead>{/* Added Captured By TableHead */}
               <TableHead className="text-right">Target (Ltrs)</TableHead>
               <TableHead className="text-right">Achieved (Ltrs)</TableHead>
               <TableHead className="text-right">Commission (KES)</TableHead>
@@ -230,7 +229,7 @@ export function RecordSalesList({ data }: Props) {
                   colSpan={13} // Increased colspan to accommodate new column
                   className="text-center text-muted-foreground"
                 >
-                  No sales records found matching your filters.
+                  No sales records found matching your filters. 😔
                 </TableCell>
               </TableRow>
             )}
@@ -249,7 +248,6 @@ export function RecordSalesList({ data }: Props) {
                 <TableCell>{sale.Sales_Date}</TableCell>
                 <TableCell>{sale.Date_Captured}</TableCell>
                 <TableCell>{sale.Time_Captured}</TableCell>
-                <TableCell>{sale.Captured_By}</TableCell>{/* Added Captured By TableCell */}
                 <TableCell className="text-right">
                   {sale.Total_Target.toFixed(2)}
                 </TableCell>

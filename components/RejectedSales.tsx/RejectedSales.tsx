@@ -135,20 +135,21 @@ export function RejectedSalesList({ data, username }: Props) {
             Sales records for {data[0]?.Outlet_Name || '—'} (Filtered)
           </TableCaption>
 
-          <TableHeader className="bg-gray-50 sticky top-0 z-10">
+          <TableHeader className="bg-gray-50 sticky top-0">
             <TableRow>
-              <TableHead className="w-[100px] text-gray-600">No</TableHead>
-              <TableHead className="text-gray-600">Outlet Code</TableHead>
-              <TableHead className="text-gray-600">Outlet Name</TableHead>
-              <TableHead className="text-gray-600">Region Code</TableHead>
-              <TableHead className="text-gray-600">Region Name</TableHead>
-              <TableHead className="text-gray-600">Sales Date</TableHead>
-              <TableHead className="text-gray-600">Date Captured</TableHead>
-              <TableHead className="text-gray-600">Time Captured</TableHead>
-              <TableHead className="text-right text-gray-600">Target (Ltrs)</TableHead>
-              <TableHead className="text-right text-gray-600">Achieved (Ltrs)</TableHead>
-              <TableHead className="text-right text-gray-600">Commission (KES)</TableHead>
-              <TableHead className="text-gray-600">Status</TableHead>
+              {/* Added font-bold and text-gray-900 to each TableHead */}
+              <TableHead className="w-[100px] text-gray-900 font-bold">No</TableHead>
+              <TableHead className="text-gray-900 font-bold">Outlet Code</TableHead>
+              <TableHead className="text-gray-900 font-bold">Outlet Name</TableHead>
+              <TableHead className="text-gray-900 font-bold">Region Code</TableHead>
+              <TableHead className="text-gray-900 font-bold">Region Name</TableHead>
+              <TableHead className="text-gray-900 font-bold">Sales Date</TableHead>
+              <TableHead className="text-gray-900 font-bold">Date Captured</TableHead>
+              <TableHead className="text-gray-900 font-bold">Time Captured</TableHead>
+              <TableHead className="text-right text-gray-900 font-bold">Target (Ltrs)</TableHead>
+              <TableHead className="text-right text-gray-900 font-bold">Achieved (Ltrs)</TableHead>
+              <TableHead className="text-right text-gray-900 font-bold">Commission (KES)</TableHead>
+              <TableHead className="text-gray-900 font-bold">Status</TableHead>
             </TableRow>
           </TableHeader>
 

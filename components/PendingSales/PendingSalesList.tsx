@@ -147,20 +147,20 @@ export default function PendingSalesList({ data }: PendingSalesListProps) {
             Sales records for {data[0]?.Outlet_Name || '—'} (Filtered)
           </TableCaption>
 
-          <TableHeader className="bg-gray-50 sticky top-0 z-10">
+          <TableHeader className="bg-gray-50 sticky top-0">
             <TableRow>
-              <TableHead className="w-[100px] text-gray-600">No</TableHead>
-              <TableHead className="text-gray-600">Outlet Code</TableHead>
-              <TableHead className="text-gray-600">Outlet Name</TableHead>
-              <TableHead className="text-gray-600">Region Code</TableHead>
-              <TableHead className="text-gray-600">Region Name</TableHead>
-              <TableHead className="text-gray-600">Sales Date</TableHead>
-              <TableHead className="text-gray-600">Date Captured</TableHead>
-              <TableHead className="text-gray-600">Time Captured</TableHead>
-              <TableHead className="text-right text-gray-600">Target (Ltrs)</TableHead>
-              <TableHead className="text-right text-gray-600">Achieved (Ltrs)</TableHead>
-              <TableHead className="text-right text-gray-600">Commission (KES)</TableHead>
-              <TableHead className="text-gray-600">Status</TableHead>
+              <TableHead className="w-[100px] text-gray-900">No</TableHead>
+              <TableHead className="text-gray-900">Outlet Code</TableHead>
+              <TableHead className="text-gray-900">Outlet Name</TableHead>
+              <TableHead className="text-gray-900">Region Code</TableHead>
+              <TableHead className="text-gray-900">Region Name</TableHead>
+              <TableHead className="text-gray-900">Sales Date</TableHead>
+              <TableHead className="text-gray-900">Date Captured</TableHead>
+              <TableHead className="text-gray-900">Time Captured</TableHead>
+              <TableHead className="text-right text-gray-900">Target (Ltrs)</TableHead>
+              <TableHead className="text-right text-gray-900">Achieved (Ltrs)</TableHead>
+              <TableHead className="text-right text-gray-900">Commission (KES)</TableHead>
+              <TableHead className="text-gray-900">Status</TableHead>
             </TableRow>
           </TableHeader>
 
