@@ -12,11 +12,20 @@ import {
   DialogDescription,
 } from '../ui/dialog';
 import { Button } from '../ui/button';
-// ✅ preferred
-import { Icon } from '@iconify/react'; // Corrected import to use the preferred method
+import { Icon } from '@iconify/react';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { Card } from '../ui/card';
+// Importing the new API functions and types from a single source
+import {
+  submitForApproval,
+  fetchSalesLines,
+  updateSalesLine,
+  deleteSalesLine, // Renamed to apiDeleteSalesLine in RecordSalesForm to avoid conflict
+  addSalesLine,
+} from '@/lib/api';
+// Importing types directly from '@/types'
+import { SalesLine, VivoProduct, ProductSKU, VivoSalesHeader } from '@/types';
 import {
   Table,
   TableCaption,
@@ -26,16 +35,7 @@ import {
   TableBody,
   TableCell,
 } from '../ui/table';
-// Importing the new API functions and types from a single source
-import {
-  submitForApproval,
-  fetchSalesLines,
-  updateSalesLine,
-  deleteSalesLine,
-  addSalesLine,
-} from '@/lib/api';
-// Importing types directly from '@/types'
-import { SalesLine, VivoProduct, ProductSKU, VivoSalesHeader } from '@/types';
+
 
 type Toast = {
   type: 'success' | 'error';
@@ -96,11 +96,6 @@ export default function RecordSalesEditView({
     // If not editable, do nothing
     if (!isEditable) return;
 
-    // Set updating flag for the specific row
-    setLineItems((rows) =>
-      rows.map((r, i) => (i === idx ? { ...r, isUpdating: true } : r))
-    );
-
     const row = lineItems[idx];
     if (!row) {
       setToast({ type: 'error', message: `Error: Row not found for update.` });
@@ -109,6 +104,22 @@ export default function RecordSalesEditView({
       );
       return;
     }
+
+    // If the line is newly added and still has a temporary string SN,
+    // update local state only and prevent API call.
+    if (typeof row.SN === 'string' && row.SN.startsWith('temp-')) {
+        setLineItems(rows => rows.map((r, i) =>
+            i === idx ? { ...r, ...updatedFields, isUpdating: false } : r
+        ));
+        setToast({ type: 'success', message: `${field} updated (local only)` });
+        return; // Exit early, no API call needed yet
+    }
+
+
+    // Set updating flag for the specific row
+    setLineItems((rows) =>
+      rows.map((r, i) => (i === idx ? { ...r, isUpdating: true } : r))
+    );
 
     // Construct the API payload carefully.
     // Only include properties that are explicitly defined in updatedFields
@@ -119,7 +130,7 @@ export default function RecordSalesEditView({
       apiPayload.Product_Code = updatedFields.Product_Code;
     }
     if (updatedFields.SKU_Code !== undefined) {
-      apiPayload.SKU_Code = updatedFields.SKU_Code; // Corrected typo: SKu_Code to SKU_Code
+      apiPayload.SKU_Code = updatedFields.SKU_Code;
     }
     if (updatedFields.Quantity !== undefined) {
       apiPayload.Quantity = updatedFields.Quantity;
@@ -164,9 +175,10 @@ export default function RecordSalesEditView({
     }
 
     try {
+      // Cast SN to number here, as updateSalesLine expects a number for a persisted line
       const updated = await updateSalesLine(
         row.No,
-        row.SN,
+        row.SN as number, // Cast SN to number as it's guaranteed to be number here
         apiPayload,
         row['@odata.etag']
       );
@@ -243,6 +255,14 @@ export default function RecordSalesEditView({
     const itemToDelete = lineItems[idx];
     if (!itemToDelete) return;
 
+    // If SN is a temporary string, it means the line hasn't been saved yet.
+    // Just remove it from the local state.
+    if (typeof itemToDelete.SN === 'string' && itemToDelete.SN.startsWith('temp-')) {
+        setToast({ type: 'success', message: 'Unsaved line removed from list.' });
+        setLineItems(rows => rows.filter((_, i) => i !== idx));
+        return;
+    }
+
     setLineItems((rows) =>
       rows.map((r, i) => (i === idx ? { ...r, isUpdating: true } : r))
     );
@@ -250,7 +270,7 @@ export default function RecordSalesEditView({
     try {
       await deleteSalesLine(
         itemToDelete.No,
-        itemToDelete.SN,
+        itemToDelete.SN as number, // Cast SN to number for API call
         itemToDelete['@odata.etag']
       );
 
@@ -273,40 +293,99 @@ export default function RecordSalesEditView({
     // If not editable, do nothing
     if (!isEditable) return;
 
-    const row = lineItems[idx];
-    if (!row) return;
+    const currentRow = lineItems[idx];
+    if (!currentRow) {
+        setToast({ type: 'error', message: 'Cannot add line: Missing context.' });
+        return;
+    }
 
-    setLineItems((rows) =>
-      rows.map((r, i) => (i === idx ? { ...r, isUpdating: true } : r))
-    );
+    // Temporarily mark the current row as updating and add a placeholder for the new line
+    setLineItems(rows => {
+        const updatedRows = [...rows];
+        updatedRows[idx] = { ...updatedRows[idx], isUpdating: true };
+        updatedRows.splice(idx + 1, 0, {
+            No: currentRow.No,
+            SN: `temp-creating-${crypto.randomUUID()}`, // Temporary ID for UI rendering
+            Officer_Code: currentRow.Officer_Code,
+            Product_Code: currentRow.Product_Code || '',
+            Officer_Name: currentRow.Officer_Name,
+            Role_Name: currentRow.Role_Name,
+            Target: 0,
+            SKU_Code: '',
+            SKU_Liters: 0,
+            Grade: '',
+            Quantity: 0,
+            Total: 0,
+            SKU_Ratio: 0,
+            Commission_Earned: 0,
+            '@odata.etag': '',
+            isUpdating: true, // This new line is also 'updating' while being created
+            SKU_Name: '', // Fix: Initialize SKU_Name as it's required by SalesLine
+        });
+        return updatedRows;
+    });
 
     try {
-      const officerCode = row.Officer_Code || '';
-      const productCode = row.Product_Code || '';
+      const officerCode = currentRow.Officer_Code || '';
+      const productCode = currentRow.Product_Code || '';
 
       const newLine = await addSalesLine(No, officerCode, productCode);
 
-      setLineItems((rows) => {
-        const newRows = [...rows];
-        
-        // Ensure SN is a unique number for React keys
-        const effectiveSN = (newLine.SN === undefined || newLine.SN === null || newLine.SN === 0)
-            ? -(Date.now() + Math.random())
-            : newLine.SN;
+      setLineItems(rows => {
+        // Find the temporary placeholder and replace it with the actual new line data
+        const finalRows = rows.map(r => {
+            if (typeof r.SN === 'string' && r.SN.startsWith('temp-creating-')) {
+                // Map the API response to the SalesLine type, ensuring correct SN and numeric defaults
+                return {
+                    ...newLine,
+                    SN: newLine.SN || `temp-${crypto.randomUUID()}`, // Use API SN or fallback to new temp
+                    SKU_Liters: newLine.SKU_Liters ?? 0,
+                    Quantity: newLine.Quantity ?? 0,
+                    Total: newLine.Total ?? 0,
+                    SKU_Ratio: newLine.SKU_Ratio ?? 0,
+                    Commission_Earned: newLine.Commission_Earned ?? 0,
+                    Target: newLine.Target ?? 0,
+                    isUpdating: false
+                };
+            }
+            // Ensure the original row (if it was set to updating) is reset
+            if (r.No === currentRow.No && r.SN === currentRow.SN) {
+                return { ...r, isUpdating: false };
+            }
+            return r;
+        }).filter(Boolean) as SalesLine[]; // Filter out any old temp placeholders if map didn't replace them
 
-        const finalNewLine: SalesLine = {
-          ...newLine,
-          SN: effectiveSN,
-          isUpdating: false
-        };
-        newRows.splice(idx + 1, 0, finalNewLine);
-        return newRows.map((r, i) => (i === idx ? { ...r, isUpdating: false } : r));
+        // Ensure no duplicates by checking if the new line is already there
+        const isNewLineAlreadyPresent = finalRows.some(item => item.No === newLine.No && item.SN === newLine.SN);
+        if (!isNewLineAlreadyPresent && newLine.SN !== `temp-${crypto.randomUUID()}`) { // Prevent adding if it's already properly handled or still a generic temp
+            finalRows.push({
+                ...newLine,
+                SN: newLine.SN || `temp-${crypto.randomUUID()}`,
+                SKU_Liters: newLine.SKU_Liters ?? 0,
+                Quantity: newLine.Quantity ?? 0,
+                Total: newLine.Total ?? 0,
+                SKU_Ratio: newLine.SKU_Ratio ?? 0,
+                Commission_Earned: newLine.Commission_Earned ?? 0,
+                Target: newLine.Target ?? 0,
+                isUpdating: false
+            });
+        }
+        return finalRows;
       });
       setToast({ type: 'success', message: 'New sales line added.' });
     } catch (err: any) {
       console.error('API Add Line Error:', err);
-      setLineItems((rows) =>
-        rows.map((r, i) => (i === idx ? { ...r, isUpdating: false } : r))
+      // Revert updating state and remove any temporary placeholders on error
+      setLineItems(rows =>
+        rows.map(r => {
+            if (r.No === currentRow.No && r.SN === currentRow.SN) {
+                return { ...r, isUpdating: false };
+            }
+            if (typeof r.SN === 'string' && r.SN.startsWith('temp-creating-')) {
+                return null; // Mark for removal
+            }
+            return r;
+        }).filter(Boolean) as SalesLine[] // Filter out nulls
       );
       setToast({ type: 'error', message: `Failed to add new sales line: ${err.message || 'Unknown error'}` });
     }
@@ -317,12 +396,20 @@ export default function RecordSalesEditView({
     if (!No || !isOpen) return;
     fetchSalesLines(No)
       .then((d) => {
-        // Ensure each fetched item has a unique numeric SN for React keys
+        // Ensure each fetched item has a unique SN (number or temp string) for React's key prop
         const processedData = d.map((item, index) => ({
           ...item,
+          // If SN from API is 0 or undefined, assign a unique temporary string.
+          // Otherwise, use the API's SN (which should be a number).
           SN: (item.SN === undefined || item.SN === null || item.SN === 0)
-            ? -(Date.now() + index + Math.random()) // Use index to help with uniqueness if multiple are undefined at once
-            : item.SN,
+            ? `temp-${crypto.randomUUID()}` // Assign a unique temporary string ID
+            : Number(item.SN), // Ensure it's a number if it came from API
+          SKU_Liters: item.SKU_Liters ?? 0, // Ensure numeric defaults
+          Quantity: item.Quantity ?? 0,
+          Total: item.Total ?? 0,
+          SKU_Ratio: item.SKU_Ratio ?? 0,
+          Commission_Earned: item.Commission_Earned ?? 0,
+          Target: item.Target ?? 0,
         }));
         setLineItems(processedData);
       })
@@ -339,6 +426,23 @@ export default function RecordSalesEditView({
 
   // Send for approval
   const handleSendForApproval = async () => {
+    // Check if there's at least one line with Quantity > 0 and no unsaved (temp) lines
+    const hasValidLines = lineItems.some(item => item.Quantity > 0 && typeof item.SN === 'number');
+    const hasUnsavedLines = lineItems.some(item => typeof item.SN === 'string' && item.SN.startsWith('temp-'));
+
+    if (hasUnsavedLines) {
+        setToast({ type: 'error', message: 'Please save all newly added lines before sending for approval.' });
+        return;
+    }
+
+    if (!hasValidLines) {
+      setToast({
+        type: 'error',
+        message: 'Add at least one line with Qty > 0 before sending.',
+      });
+      return;
+    }
+
     setIsApproving(true);
     setToast(null);
 
@@ -500,7 +604,7 @@ export default function RecordSalesEditView({
                 <TableBody>
                   {lineItems.map((item, idx) => (
                     <TableRow
-                      key={`${item.No}-${item.SN}`} // SN is now guaranteed to be unique and numeric
+                      key={`${item.No}-${item.SN}`}
                       className="even:bg-gray-50"
                     >
                       <TableCell className="font-medium">
@@ -510,9 +614,9 @@ export default function RecordSalesEditView({
                       <TableCell>
                         <select
                           className="w-full border rounded px-2 py-1"
-                          disabled={item.isUpdating || !isEditable} // Disable if not editable
+                          disabled={item.isUpdating || !isEditable}
                           value={item.Product_Code ?? ''}
-                          onChange={(e) =>
+                          onChange={e =>
                             handleProductChange(idx, e.target.value)
                           }
                         >
@@ -531,7 +635,7 @@ export default function RecordSalesEditView({
                         <Input
                           list={`sku-options-${idx}`}
                           className="w-full border rounded px-2 py-1"
-                          disabled={item.isUpdating || !isEditable} // Disable if not editable
+                          disabled={item.isUpdating || !isEditable}
                           value={item.SKU_Code ?? ''}
                           onChange={(e) => handleSKUChange(idx, e.target.value)}
                           placeholder="Search SKU"
@@ -556,7 +660,7 @@ export default function RecordSalesEditView({
                         <Input
                           type="number"
                           className="w-[80px] text-right"
-                          disabled={item.isUpdating || !isEditable} // Disable if not editable
+                          disabled={item.isUpdating || !isEditable}
                           value={item.Quantity}
                           onChange={(e) =>
                             handleQuantityChange(idx, Number(e.target.value))
