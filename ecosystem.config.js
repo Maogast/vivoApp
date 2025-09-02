@@ -12,14 +12,19 @@ module.exports = {
       watch: false,
       max_memory_restart: "1G",
 
-      // Runtime env for the Node process only
       env: {
         PORT: 3000
       },
 
       env_production: {
         NODE_ENV: "production",
-        PORT: 3000
+        // These are only used at runtime (next start),
+        // build‐time vars come from .env.production
+        NEXT_PUBLIC_API_BASE_URL:
+          "https://vivo3.bitsnke.co.ke/VIVOAPI/ODataV4/Company('VIVO')",
+        NEXT_PUBLIC_API_USERNAME: "VAPI",
+        NEXT_PUBLIC_API_PASSWORD:
+          "DtdQj7LCjAnuNnAx/f3llUGWZ6MkfR4XBkJvHUEY/ZU="
       }
     }
   ],
@@ -34,13 +39,14 @@ module.exports = {
       key: "~/.ssh/id_ed25519",
       ssh_options: "StrictHostKeyChecking=no",
 
-      // ✅ Copy .env.production from local machine to the release folder before build
+      // 1) Before any SSH or git‐clone happens, scp your local .env.local
+      //    into the new release folder as .env.production
       "pre-deploy-local":
-        "scp -i ~/.ssh/id_ed25519 .env.production root@144.91.79.8:{{release_path}}/.env.production",
+        "scp -i ~/.ssh/id_ed25519 .env.production root@144.91.79.8:/var/www/vivo-main-frontend/current/.env.production",
 
-      // ✅ Build fresh and reload PM2 + Nginx
+      // 2) On the remote, build and reload
       "post-deploy": [
-        "cd {{release_path}}",
+        "cd /var/www/vivo-main-frontend/current",
         "npm ci --omit=dev",
         "npm install typescript --no-save",
         "rm -rf .next", // ensure no stale build
