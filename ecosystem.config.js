@@ -34,12 +34,12 @@ module.exports = {
       key: "~/.ssh/id_ed25519",
       ssh_options: "StrictHostKeyChecking=no",
 
-      // No pre-deploy-local here — we copy env in post-deploy after release folder exists
-      "post-deploy": [
-        // ✅ Copy .env.production into the actual release folder
-        "scp -i ~/.ssh/id_ed25519 /root/.env.production root@144.91.79.8:{{release_path}}/.env.production",
+      // ✅ Copy .env.production from local machine to the release folder before build
+      "pre-deploy-local":
+        "scp -i ~/.ssh/id_ed25519 .env.production root@144.91.79.8:{{release_path}}/.env.production",
 
-        // Build and reload
+      // ✅ Build fresh and reload PM2 + Nginx
+      "post-deploy": [
         "cd {{release_path}}",
         "npm ci --omit=dev",
         "npm install typescript --no-save",
