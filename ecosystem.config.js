@@ -49,8 +49,10 @@ module.exports = {
         "cd /var/www/vivo-main-frontend/current",
         "npm ci --omit=dev",
         "npm install typescript --no-save",
+        "rm -rf .next", // ensure no stale build
         "npm run build",
-        "pm2 reload ecosystem.config.js --env production"
+        "pm2 reload ecosystem.config.js --env production",
+        "sudo nginx -t && sudo systemctl reload nginx"
       ].join(" && ")
     }
   }
