@@ -42,7 +42,7 @@ module.exports = {
       // 1) Before any SSH or git‐clone happens, scp your local .env.local
       //    into the new release folder as .env.production
       "pre-deploy-local":
-        "scp -i ~/.ssh/id_ed25519 .env.local root@144.91.79.8:/var/www/vivo-main-frontend/current/.env.production",
+        "scp -i ~/.ssh/id_ed25519 .env.production root@144.91.79.8:/var/www/vivo-main-frontend/current/.env.production",
 
       // 2) On the remote, build and reload
       "post-deploy": [
