@@ -12,7 +12,7 @@ module.exports = {
       watch: false,
       max_memory_restart: "1G",
 
-      // Runtime env for server process only
+      // Runtime env for the Node process only
       env: {
         PORT: 3000
       },
@@ -34,12 +34,12 @@ module.exports = {
       key: "~/.ssh/id_ed25519",
       ssh_options: "StrictHostKeyChecking=no",
 
-      // ✅ Copy .env.production into the release folder before build
-      "pre-deploy-local":
-        "scp -i ~/.ssh/id_ed25519 .env.production root@144.91.79.8:{{release_path}}/.env.production",
-
-      // ✅ Build fresh and reload PM2 + Nginx
+      // No pre-deploy-local here — we copy env in post-deploy after release folder exists
       "post-deploy": [
+        // ✅ Copy .env.production into the actual release folder
+        "scp -i ~/.ssh/id_ed25519 /root/.env.production root@144.91.79.8:{{release_path}}/.env.production",
+
+        // Build and reload
         "cd {{release_path}}",
         "npm ci --omit=dev",
         "npm install typescript --no-save",
