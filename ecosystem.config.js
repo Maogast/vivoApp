@@ -21,7 +21,7 @@ module.exports = {
         // These are only used at runtime (next start),
         // build‐time vars come from .env.production
         NEXT_PUBLIC_API_BASE_URL:
-          "http://109.123.250.165:8048/VIVOAPI/ODataV4/Company('VIVO')",
+          "https://vivo3.bitsnke.co.ke/VIVOAPI/ODataV4/Company('VIVO')",
         NEXT_PUBLIC_API_USERNAME: "VAPI",
         NEXT_PUBLIC_API_PASSWORD:
           "DtdQj7LCjAnuNnAx/f3llUGWZ6MkfR4XBkJvHUEY/ZU="
