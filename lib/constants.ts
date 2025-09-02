@@ -10,7 +10,7 @@ export const VIVO_LOGO = '/images/vivo.jpg'
  */
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
-  "http://109.123.250.165:8048/VIVOAPI/ODataV4/Company('VIVO')"
+  "https://vivo3.bitsnke.co.ke/VIVOAPI/ODataV4/Company('VIVO')"
 
 const username = process.env.NEXT_PUBLIC_API_USERNAME
 const password = process.env.NEXT_PUBLIC_API_PASSWORD
