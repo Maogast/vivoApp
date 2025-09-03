@@ -47,3 +47,4 @@ next-env.d.ts
 # env production files
 .env.production.npmrc
 .env.local
+.env.local
