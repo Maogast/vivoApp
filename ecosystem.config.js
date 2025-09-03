@@ -1,4 +1,5 @@
 // ecosystem.config.js
+
 module.exports = {
   apps: [
     {
@@ -19,7 +20,7 @@ module.exports = {
       env_production: {
         NODE_ENV: "production",
         // These are only used at runtime (next start),
-        // build‐time vars come from .env.production
+        // build-time vars come from .env.production
         NEXT_PUBLIC_API_BASE_URL:
           "https://vivo3.bitsnke.co.ke/VIVOAPI/ODataV4/Company('VIVO')",
         NEXT_PUBLIC_API_USERNAME: "VAPI",
@@ -39,18 +40,23 @@ module.exports = {
       key: "~/.ssh/id_ed25519",
       ssh_options: "StrictHostKeyChecking=no",
 
-      // 1) Before any SSH or git‐clone happens, scp your local .env.local
-      //    into the new release folder as .env.production
+      // Copy your .env.production into the shared folder before deploy
       "pre-deploy-local":
         "scp -i ~/.ssh/id_ed25519 .env.production root@144.91.79.8:/var/www/vivo-main-frontend/shared/.env.production",
 
-      // 2) On the remote, build and reload
+      // Build and reload on the remote
       "post-deploy": [
+        // 1) Remove any stray .env.local to prevent fallback to IP
+        "rm -f .env.local",
+
+        // 2) Symlink the shared production env, then install & build
         "ln -nfs /var/www/vivo-main-frontend/shared/.env.production .env.production",
         "npm ci --omit=dev",
         "npm install typescript --no-save",
-        "rm -rf .next", // ensure no stale build
+        "rm -rf .next",      // ensure no stale build
         "npm run build",
+
+        // 3) Reload PM2 and Nginx
         "pm2 reload ecosystem.config.js --env production",
         "sudo nginx -t && sudo systemctl reload nginx"
       ].join(" && ")
